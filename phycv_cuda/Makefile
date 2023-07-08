@@ -5,7 +5,7 @@ LDFLAGS := -L/usr/lib/aarch64-linux-gnu
 
 INCLUDES := -I/usr/include/opencv4
 
-SRCS := main.cu kernels.cu
+SRCS := vevid.cu kernels.cu
 OBJS := $(SRCS:.cu=.o)
 TARGET := vevid
 
