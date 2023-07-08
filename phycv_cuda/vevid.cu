@@ -174,12 +174,12 @@ int main(int argc, char** argv) {
 
         // Read frame into buffer
         auto startRead = chrono::high_resolution_clock::now(); 
-	    cap >> image; 
+    	cap >> image; 
         auto endRead = chrono::high_resolution_clock::now(); 
         chrono::duration<float> read_frame = chrono::duration_cast<chrono::duration<float>>(endRead - startRead);
         read_time += read_frame.count(); 
 
-	    // Display unaltered video feed (for reference)
+    	// Display unaltered video feed (for reference)
         imshow("Raw Feed", image);
 
         // Convert from BGR to HSV 
@@ -242,7 +242,7 @@ int main(int argc, char** argv) {
         cudaEventRecord(startFFTShift); 
         float max_val; 
         cudaMemcpy(&max_val, d_max, sizeof(float), cudaMemcpyDeviceToHost); 
-	    scale <<<grid_size, block_size>>> (d_vevid_kernel, (1.0f / max_val), N); 
+    	scale <<<grid_size, block_size>>> (d_vevid_kernel, (1.0f / max_val), N); 
         fftshift <<<grid_size, block_size>>> (d_vevid_kernel, width, height); 
         cudaEventRecord(stopFFTShift); 
         cudaEventSynchronize(stopFFTShift); 
@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
         float phase_frame = 0; 
         cudaEventElapsedTime(&phase_frame, startPhase, stopPhase); 
         phase_time += phase_frame; 
-	    // --End of Algorithm Code
+    	// --End of Algorithm Code--
 
         // Copy data from device to host
         cudaEventRecord(startDtoHCopy); 
