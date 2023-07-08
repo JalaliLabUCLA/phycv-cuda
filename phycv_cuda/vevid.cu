@@ -15,6 +15,11 @@
 using namespace cv; 
 using namespace std; 
 
+// Initialize and set Frame Width And Height
+const size_t width = 1920; 
+const size_t height = 1080; 
+const size_t N = width * height;
+
 struct Parameters {
     float phase_strength; 
     float warp_strength; 
@@ -59,10 +64,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Initialize and set Frame Width And Height
-    const size_t width = 1920; 
-    const size_t height = 1080; 
-    const size_t N = width * height; 
     cap.set(CAP_PROP_FRAME_WIDTH, width); 
     cap.set(CAP_PROP_FRAME_HEIGHT, height);
     cout << "width: " << width << endl;
