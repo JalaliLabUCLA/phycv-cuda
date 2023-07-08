@@ -42,7 +42,7 @@ git clone https://github.com/TaejusYee2001/PhyCV_CUDA.git
 
   **Build**
   ```bash
-  cd phycv
+  cd phycv_cuda
   make
   ```
   **Run**
