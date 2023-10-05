@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <cufft.h>
+#include <npp.h>
 
 #include <iostream>
 #include <string>
@@ -17,21 +18,31 @@ using namespace cv;
 using namespace std;
 
 /* Timing Macros */
-#define MEASURE_GPU_TIME(func, result)                        \
-    do                                                        \
-    {                                                         \
-        cudaEvent_t startEvent, stopEvent;                    \
-        cudaEventCreate(&startEvent);                         \
-        cudaEventCreate(&stopEvent);                          \
-        cudaEventRecord(startEvent);                          \
-        func;                                                 \
-        cudaEventRecord(stopEvent);                           \
-        cudaEventSynchronize(stopEvent);                      \
-        float milliseconds = 0;                               \
-        cudaEventElapsedTime(&milliseconds, startEvent, stopEvent); \
-        result = static_cast<double>(milliseconds);           \
-        cudaEventDestroy(startEvent);                         \
-        cudaEventDestroy(stopEvent);                          \
+#define MEASURE_GPU_TIME(func, result)                                                      \
+    do                                                                                      \
+    {                                                                                       \
+        cudaEvent_t startEvent, stopEvent;                                                  \
+        cudaEventCreate(&startEvent);                                                       \
+        cudaEventCreate(&stopEvent);                                                        \
+        cudaEventRecord(startEvent);                                                        \
+        func;                                                                               \
+        cudaEventRecord(stopEvent);                                                         \
+        cudaEventSynchronize(stopEvent);                                                      \
+        float milliseconds = 0;                                                             \
+        cudaEventElapsedTime(&milliseconds, startEvent, stopEvent);                         \
+        result = static_cast<float>(milliseconds);                                          \
+        cudaEventDestroy(startEvent);                                                       \
+        cudaEventDestroy(stopEvent);                                                        \
+    } while (0)
+
+#define MEASURE_CPU_TIME(func, result)                                                      \
+    do                                                                                      \
+    {                                                                                       \
+        auto start = chrono::high_resolution_clock::now();                                  \
+        func;                                                                               \
+        auto stop = std::chrono::high_resolution_clock::now();                              \
+        chrono::duration<float, milli> elapsed = stop - start;                              \
+        result = static_cast<double>(elapsed.count());                                      \
     } while (0)
 
 struct Parameters {
@@ -46,6 +57,18 @@ struct Parameters {
     {}
 };
 
+struct Times {
+    float BGR_to_HSV_time; 
+    float data_in_time; 
+    float fft_time; 
+    float kernel_multiplication_time; 
+    float ifft_time; 
+    float phase_time;
+    float data_out_time; 
+    float HSV_to_BGR_time;  
+    float vevid_time; 
+}; 
+
 struct VevidContext
 {
     /* GPU resources */
@@ -54,6 +77,9 @@ struct VevidContext
     uint8_t *d_buffer; 
     float *d_max; 
     float *d_min; 
+
+    uchar3* d_rgb; 
+    float3* d_hsv; 
 
     /* FFT plan */ 
     cufftHandle plan; 
@@ -67,8 +93,9 @@ struct VevidContext
 }; 
 
 VevidContext context; 
+Times times; 
 
-void vevid_init(int width, int height, 
+void vevid_init(int width, int height,
     float phase_strength, 
     float spectral_phase_variance, 
     float regularization_term, 
@@ -85,6 +112,9 @@ void vevid_init(int width, int height,
     cudaMalloc((void**)&context.d_max, sizeof(float)); 
     cudaMalloc((void**)&context.d_min, sizeof(float)); 
 
+    cudaMalloc((void**)&context.d_rgb, N * sizeof(uchar3)); 
+    cudaMalloc((void**)&context.d_hsv, N * sizeof(float3)); 
+
     /* Initialize FFT plan */
     cufftPlan2d(&context.plan, (int)height, (int)width, CUFFT_C2C); 
 
@@ -93,33 +123,9 @@ void vevid_init(int width, int height,
     context.params.spectral_phase_variance = spectral_phase_variance; 
     context.params.regularization_term = regularization_term; 
     context.params.phase_activation_gain = phase_activation_gain; 
-}
 
-void vevid(cv::Mat& image) {
-    size_t width = context.width; 
-    size_t height = context.height; 
-    size_t N = width * height; 
-
-    /* Convert from BGR to HSV */
-    cvtColor(image, image, COLOR_BGR2HSV); 
-
-    /* Get pointer to V channel of HSV matrix */
-    vector<Mat> hsv_channels; 
-    split(image, hsv_channels); 
-    uint8_t* idata = hsv_channels[2].ptr<uint8_t>(0); 
-
-    /* -- Start of Algorithm Code -- */
-    /* Copy data from host to device */
-    cudaMemcpy(context.d_buffer, idata, N * sizeof(uint8_t), cudaMemcpyHostToDevice); 
-
-    /* Call CUDA kernels */
     int block_size = 32; 
     int grid_size = ((int)N + block_size - 1) / block_size; 
-
-    /* Take FFT */
-    populate_real<<<grid_size, block_size>>>(context.d_image, context.d_buffer, N);
-    add<<<grid_size, block_size>>>(context.d_image, context.params.regularization_term, N);
-    cufftExecC2C(context.plan, context.d_image, context.d_image, CUFFT_FORWARD); 
 
     /* Compute VEViD kernel */
     vevid_kernel<<<grid_size, block_size>>>(context.d_vevid_kernel, context.params.phase_strength, context.params.spectral_phase_variance, width, height);
@@ -128,28 +134,108 @@ void vevid(cv::Mat& image) {
     cudaMemcpy(&max_val, context.d_max, sizeof(float), cudaMemcpyDeviceToHost); 
     scale<<<grid_size, block_size>>>(context.d_vevid_kernel, (1.0f / max_val), N);
     fftshift<<<grid_size, block_size>>>(context.d_vevid_kernel, width, height);
+}
 
-    /* Multiply kernel with image in frequency domain */
-    hadamard<<<grid_size, block_size>>>(context.d_vevid_kernel, context.d_image, N);
+void vevid(cv::Mat& image, bool show_timing, bool lite) {
+    auto vevid_start = chrono::high_resolution_clock::now(); 
 
-    /* Take IFFT */
-    cufftExecC2C(context.plan, context.d_image, context.d_image, CUFFT_INVERSE);
-    scale<<<grid_size, block_size>>>(context.d_image, (1.0f / (float)N), N);
+    size_t width = context.width; 
+    size_t height = context.height; 
+    size_t N = width * height; 
 
-    /* Get phase */
-    vevid_phase<<<grid_size, block_size>>>(context.d_image, context.d_buffer, context.params.phase_activation_gain, N); 
+    /* Convert from BGR to HSV */
+    float to_HSV_time; 
+    MEASURE_CPU_TIME(cvtColor(image, image, COLOR_BGR2HSV), to_HSV_time);
+    
+    /*
+    cvtColor(image, image, COLOR_BGR2RGB); 
+    uchar3* rgb = image.ptr<uchar3>(0); 
+    uchar3* out; 
+    cudaMemcpy(context.d_rgb, rgb, N * sizeof(uchar3), cudaMemcpyHostToDevice); 
+    convert_to_hsv_wrapper(context.d_rgb, context.d_hsv, width, height); 
+    */
+
+    /* Get pointer to V channel of HSV matrix */
+    auto start = chrono::high_resolution_clock::now(); 
+    vector<Mat> hsv_channels; 
+    split(image, hsv_channels); 
+    uint8_t* idata = hsv_channels[2].ptr<uint8_t>(0); 
+    auto stop = chrono::high_resolution_clock::now(); 
+    chrono::duration<float, std::milli> elapsed = stop - start; 
+    times.BGR_to_HSV_time = to_HSV_time + elapsed.count(); 
+
+    /* -- Start of Algorithm Code -- */
+    /* Copy data from host to device */
+    MEASURE_GPU_TIME(cudaMemcpy(context.d_buffer, idata, N * sizeof(uint8_t), cudaMemcpyHostToDevice), times.data_in_time); 
+
+    /* Call CUDA kernels */
+    int block_size = 32; 
+    int grid_size = ((int)N + block_size - 1) / block_size; 
+
+    if (lite) {
+        vevid_phase_lite<<<grid_size, block_size>>>(context.d_buffer, context.params.phase_activation_gain, context.params.regularization_term, N); 
+    }
+    else {
+        /* Take FFT */
+        float populate_real_time; 
+        float add_time; 
+        float forward_fft_time; 
+        MEASURE_GPU_TIME((populate_real<<<grid_size, block_size>>>(context.d_image, context.d_buffer, N)), populate_real_time);
+        MEASURE_GPU_TIME((add<<<grid_size, block_size>>>(context.d_image, context.params.regularization_term, N)), add_time);
+        MEASURE_GPU_TIME(cufftExecC2C(context.plan, context.d_image, context.d_image, CUFFT_FORWARD), forward_fft_time);
+        times.fft_time = populate_real_time + add_time + forward_fft_time;
+
+        /* Multiply kernel with image in frequency domain */
+        float hadamard_time; 
+        MEASURE_GPU_TIME((hadamard<<<grid_size, block_size>>>(context.d_vevid_kernel, context.d_image, N)), hadamard_time);
+        times.kernel_multiplication_time = hadamard_time; 
+
+        /* Take IFFT */
+        float backward_fft_time; 
+        float scale_time; 
+        MEASURE_GPU_TIME(cufftExecC2C(context.plan, context.d_image, context.d_image, CUFFT_INVERSE), backward_fft_time);
+        MEASURE_GPU_TIME((scale<<<grid_size, block_size>>>(context.d_image, (1.0f / (float)N), N)), scale_time);
+        times.ifft_time = backward_fft_time + scale_time; 
+
+        /* Get phase */
+        float phase_time; 
+        MEASURE_GPU_TIME((vevid_phase<<<grid_size, block_size>>>(context.d_image, context.d_buffer, context.params.phase_activation_gain, N)), phase_time);
+        times.phase_time = phase_time; 
+    }
 
     /* Copy data from device to host */
-    cudaMemcpy(idata, context.d_buffer, N * sizeof(uint8_t), cudaMemcpyDeviceToHost); 
+    MEASURE_GPU_TIME(cudaMemcpy(idata, context.d_buffer, N * sizeof(uint8_t), cudaMemcpyDeviceToHost), times.data_out_time); 
     /* -- End of Algorithm Code -- */
 
     /* Merge channels */
-    merge(hsv_channels, image); 
+    float merge_time; 
+    float to_BGR_time; 
+    MEASURE_CPU_TIME(merge(hsv_channels, image), merge_time); 
+
+    /* Normalize image */
+    //cv::normalize(image, image, 0, 255, NORM_MINMAX); 
 
     /* Convert from HSV to BGR */
-    cvtColor(image, image, COLOR_HSV2BGR); 
+    MEASURE_CPU_TIME(cvtColor(image, image, COLOR_HSV2BGR), to_BGR_time);
+    times.HSV_to_BGR_time = merge_time + to_BGR_time; 
 
-    //cudaDeviceSynchronize();
+    auto vevid_stop = chrono::high_resolution_clock::now(); 
+    chrono::duration<float, milli> total = vevid_stop - vevid_start; 
+    times.vevid_time = total.count(); 
+
+    if (show_timing) {
+        cout << "Timing Results: " << endl; 
+        cout << "BGR to HSV time per frame: " << times.BGR_to_HSV_time << " ms" << endl; 
+        cout << "Forward data copy time: " << times.data_in_time << " ms" << endl; 
+        cout << "FFT time per frame: " << times.fft_time << " ms" << endl; 
+        cout << "Kernel multiplication time per frame: " << times.kernel_multiplication_time << " ms" << endl; 
+        cout << "Inverse FFT time per frame: " << times.ifft_time << " ms" << endl; 
+        cout << "Phase time per frame: " << times.phase_time << " ms" << endl; 
+        cout << "Backward data copy time per frame: " << times.data_out_time << " ms" << endl; 
+        cout << "HSV to BGR time per frame: " << times.HSV_to_BGR_time << " ms" << endl; 
+        cout << "Total time per frame: " << times.vevid_time << " ms" << endl; 
+        cout << endl; 
+    }
 }
 
 void vevid_fini() {

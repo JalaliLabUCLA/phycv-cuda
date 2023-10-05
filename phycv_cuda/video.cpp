@@ -24,8 +24,7 @@ using namespace cv;
 WebCam::WebCam(int device, int width, int height)
     : m_device(device), m_width(width), m_height(height), m_frame_count(0), m_exit(false), m_new_frame(false) 
 {
-        m_webcam.open(m_device, CAP_ANY);
-
+        m_webcam.open(m_device, CAP_V4L2);
         m_webcam.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
         m_webcam.set(CAP_PROP_FRAME_WIDTH, m_width);
         m_webcam.set(CAP_PROP_FRAME_HEIGHT, m_height);
@@ -79,15 +78,21 @@ Window::Window(const string& window1_name, const string& window2_name)
     namedWindow(m_window2_name, WINDOW_NORMAL);
 }
 
-void Window::start_display(WebCam& webcam, bool show_fps) {
+void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, bool show_timing, bool lite) {
 
-    vevid_init(webcam.get_width(), webcam.get_height(), 10, 0.1, 4, 2.2); 
+    vevid_init(webcam.get_width(), webcam.get_height(), 10, 0.1, 4, 4); 
 
-    detectNet* net = detectNet::Create("ssd-mobilenet-v2", 0.5); 
     uchar3* d_image; 
-    cudaMalloc((void**)&d_image, webcam.get_width() * webcam.get_height() * sizeof(uchar3));
+    detectNet* net; 
+    if (show_detections) {
+        net = detectNet::Create("ssd-mobilenet-v2", 0.5); 
+        cudaMalloc((void**)&d_image, webcam.get_width() * webcam.get_height() * sizeof(uchar3));
+    }
+    
 
     m_start_time = std::chrono::steady_clock::now();
+
+    double vevid_time = 0; 
 
     while (!m_exit) {
         Mat frame = webcam.get_frame();
@@ -98,33 +103,40 @@ void Window::start_display(WebCam& webcam, bool show_fps) {
 
         imshow(m_window1_name, frame);
 
-        cudaDeviceSynchronize(); 
-        vevid(frame); 
-        cudaDeviceSynchronize(); 
-
+        std::chrono::steady_clock::time_point vevid_start = std::chrono::steady_clock::now(); 
         
-        cvtColor(frame, frame, COLOR_BGR2RGB); 
         cudaDeviceSynchronize(); 
-        cudaMemcpy2D(d_image, webcam.get_width()  * sizeof(uchar3), frame.data, frame.step, webcam.get_width() * sizeof(uchar3), webcam.get_height(), cudaMemcpyHostToDevice);
-        detectNet::Detection* detections = NULL; 
-        const int numDetections = net->Detect(d_image, webcam.get_width(), webcam.get_height(), &detections);
-        cudaDeviceSynchronize(); 
-        cvtColor(frame, frame, COLOR_RGB2BGR); 
-        
-        if( numDetections > 0 )
-		{
-			LogVerbose("%i objects detected\n", numDetections);
-		
-			for( int n=0; n < numDetections; n++ )
-			{
-				LogVerbose("\ndetected obj %i  class #%u (%s)  confidence=%f\n", n, detections[n].ClassID, net->GetClassDesc(detections[n].ClassID), detections[n].Confidence);
-				LogVerbose("bounding box %i  (%.2f, %.2f)  (%.2f, %.2f)  w=%.2f  h=%.2f\n", n, detections[n].Left, detections[n].Top, detections[n].Right, detections[n].Bottom, detections[n].Width(), detections[n].Height()); 
-			
-				if( detections[n].TrackID >= 0 ) // is this a tracked object?
-					LogVerbose("tracking  ID %i  status=%i  frames=%i  lost=%i\n", detections[n].TrackID, detections[n].TrackStatus, detections[n].TrackFrames, detections[n].TrackLost);
-			}
-		}
+        vevid(frame, show_timing, lite);
 
+        if (show_detections) {
+            cvtColor(frame, frame, COLOR_BGR2RGB); 
+            cudaDeviceSynchronize(); 
+            cudaMemcpy2D(d_image, webcam.get_width() * sizeof(uchar3), frame.data, frame.step, webcam.get_width() * sizeof(uchar3), webcam.get_height(), cudaMemcpyHostToDevice);
+            detectNet::Detection* detections = NULL; 
+            const int numDetections = net->Detect(d_image, webcam.get_width(), webcam.get_height(), &detections);
+            cudaDeviceSynchronize(); 
+            cvtColor(frame, frame, COLOR_RGB2BGR); 
+            
+            std::chrono::steady_clock::time_point vevid_end = std::chrono::steady_clock::now(); 
+            vevid_time += chrono::duration_cast<chrono::milliseconds>(vevid_end - vevid_start).count();
+
+            if( numDetections > 0 )
+            {
+                LogVerbose("%i objects detected\n", numDetections);
+            
+                for( int n=0; n < numDetections; n++ )
+                {
+                    LogVerbose("\ndetected obj %i  class #%u (%s)  confidence=%f\n", n, detections[n].ClassID, net->GetClassDesc(detections[n].ClassID), detections[n].Confidence);
+                    LogVerbose("bounding box %i  (%.2f, %.2f)  (%.2f, %.2f)  w=%.2f  h=%.2f\n", n, detections[n].Left, detections[n].Top, detections[n].Right, detections[n].Bottom, detections[n].Width(), detections[n].Height()); 
+                
+                    if( detections[n].TrackID >= 0 ) // is this a tracked object?
+                        LogVerbose("tracking  ID %i  status=%i  frames=%i  lost=%i\n", detections[n].TrackID, detections[n].TrackStatus, detections[n].TrackFrames, detections[n].TrackLost);
+                
+                    rectangle(frame, Point(detections[n].Left, detections[n].Top), Point(detections[n].Right, detections[n].Bottom), Scalar(0, 255, 0), 2);
+                }
+            }
+        }
+    
         imshow(m_window2_name, frame); 
         m_frame_count++;
 
@@ -137,8 +149,11 @@ void Window::start_display(WebCam& webcam, bool show_fps) {
     m_end_time = chrono::steady_clock::now();  
     double elapsed_time = chrono::duration_cast<chrono::milliseconds>(m_end_time - m_start_time).count();
     double average_frame_time = elapsed_time / m_frame_count;
+    double vevid_frame_time = vevid_time / m_frame_count; 
 
     std::cout << "Average Time Per Frame: " << average_frame_time << " ms" << std::endl;
+
+    std::cout << "Average VEViD Time Per Frame: " << vevid_frame_time << " ms" << std::endl;
 
     vevid_fini(); 
 }

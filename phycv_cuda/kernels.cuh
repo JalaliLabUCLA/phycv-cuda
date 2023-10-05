@@ -16,5 +16,8 @@ __global__ void hadamard(cufftComplex* a1, cufftComplex* a2, const size_t N);
 __global__ void add(cufftComplex* input, float addend, const size_t N);
 __global__ void scale(cufftComplex* input, float scalar, const size_t N);
 __global__ void arg(cufftComplex* input, uint8_t* output, const size_t N);
+__global__ void vevid_phase_lite(uint8_t* input, float gain, float regularization_term, const size_t N);
+
+void convert_to_hsv_wrapper(uchar3 *rgb, float3 *hsv, int width, int height); 
 
 #endif

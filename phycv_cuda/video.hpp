@@ -37,12 +37,11 @@ private:
 class Window {
 public:
     Window(const std::string &window1_name, const std::string& window2_name); 
-    void start_display(WebCam &webcam, bool show_fps); 
+    void start_display(WebCam &webcam, bool show_fps, bool show_detections, bool show_timing, bool lite); 
     void detect_objects(cv::Mat image, int width, int height);
 
 private: 
     void display_fps(cv::Mat& frame);
-
     std::string m_window1_name;
     std::string m_window2_name;
     bool m_exit; 
