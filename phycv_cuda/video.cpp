@@ -81,6 +81,7 @@ Window::Window(const string& window1_name, const string& window2_name)
 void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, bool show_timing, bool lite) {
 
     vevid_init(webcam.get_width(), webcam.get_height(), 10, 0.1, 4, 4); 
+    Vevid vevid(640,480,0.8,0.01,0.2,0.1); 
 
     uchar3* d_image; 
     detectNet* net; 
@@ -96,17 +97,16 @@ void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, 
 
     while (!m_exit) {
         Mat frame = webcam.get_frame();
-
+        
         if (show_fps) {
             display_fps(frame); 
         }
-
         imshow(m_window1_name, frame);
 
         std::chrono::steady_clock::time_point vevid_start = std::chrono::steady_clock::now(); 
         
         cudaDeviceSynchronize(); 
-        vevid(frame, show_timing, lite);
+        vevid.run(frame, show_timing, lite);
 
         if (show_detections) {
             cvtColor(frame, frame, COLOR_BGR2RGB); 
@@ -136,7 +136,6 @@ void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, 
                 }
             }
         }
-    
         imshow(m_window2_name, frame); 
         m_frame_count++;
 
@@ -145,15 +144,6 @@ void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, 
             m_exit = true;
         }
     }
-
-    m_end_time = chrono::steady_clock::now();  
-    double elapsed_time = chrono::duration_cast<chrono::milliseconds>(m_end_time - m_start_time).count();
-    double average_frame_time = elapsed_time / m_frame_count;
-    double vevid_frame_time = vevid_time / m_frame_count; 
-
-    std::cout << "Average Time Per Frame: " << average_frame_time << " ms" << std::endl;
-
-    std::cout << "Average VEViD Time Per Frame: " << vevid_frame_time << " ms" << std::endl;
 
     vevid_fini(); 
 }

@@ -20,8 +20,6 @@ public:
     int get_height() const; 
 
 private: 
-
-
     cv::VideoCapture m_webcam; 
     int m_device; 
     int m_width; 

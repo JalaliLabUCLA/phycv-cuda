@@ -12,6 +12,9 @@
 using namespace std; 
 using namespace cv; 
 
+// TODO: 
+// change notation -- i_value or iValue 
+
 void print_usage(const char* program_name) {
     cout << "Usage: " << program_name << " [options]" << endl;
     cout << "Options:" << endl;
@@ -186,6 +189,8 @@ void process_image(Mat& frame, Flags* flags, Params* params, bool show_detection
     namedWindow("Original Image", WINDOW_NORMAL); 
     namedWindow("VEViD-Enhanced Image", WINDOW_NORMAL); 
 
+    Vevid vevid(640,480,10,0.1,4,4); 
+
     frame = imread(flags->ivalue); 
 
     if (frame.empty()) {
@@ -202,7 +207,7 @@ void process_image(Mat& frame, Flags* flags, Params* params, bool show_detection
 
     resize(frame, frame, Size(params->width, params->height)); 
     imshow("Original Image", frame); 
-    vevid(frame, false, flags->lflag); 
+    vevid.run(frame, false, flags->lflag); 
 
     if (show_detections) {
         cvtColor(frame, frame, COLOR_BGR2RGB); 

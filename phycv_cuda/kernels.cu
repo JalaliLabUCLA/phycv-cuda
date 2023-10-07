@@ -115,6 +115,7 @@ void convert_to_hsv_wrapper(uchar3 *rgb, float3 *hsv, int width, int height) {
 	convert_to_hsv<<<blocks, threads>>>(rgb, hsv, width, height);
 }
 
+/*
 __device__ 
 float atomicMaxf(float* address, float val)
 {
@@ -174,7 +175,7 @@ void max_reduce(const cufftComplex* const d_array, float* d_max, const size_t N)
 
     int tid = threadIdx.x;
     int gid = (blockDim.x * blockIdx.x) + tid;
-    shared[tid] = FLT_MIN;
+    shared[tid] = -FLT_MAX;
 
     while (gid < N) {
         shared[tid] = max(shared[tid], d_array[gid].x);
@@ -192,6 +193,7 @@ void max_reduce(const cufftComplex* const d_array, float* d_max, const size_t N)
     if (tid == 0)
         atomicMaxf(d_max, shared[0]);
 }
+*/
 
 __global__
 void vevid_kernel(cufftComplex* array, float phase_strength, float variance, const size_t width, const size_t height)
@@ -205,26 +207,42 @@ void vevid_kernel(cufftComplex* array, float phase_strength, float variance, con
         float v = -0.5 + ((0.5 + 0.5) / (width - 1)) * col;
         float value = sqrtf((u * u) + (v * v));
         float x = expf(-(value * value) / variance);
-        x = x / phase_strength;
+        x = x * phase_strength;
         array[i].x = x; 
     }
 }
 
+// TODO: Compute min and max from the actual input. 
 __global__
 void vevid_phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N)
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
-    float max = M_PI / 2;
+    float max = 0;
     float min = -M_PI / 2;
     for (int i = index; i < N; i += stride) {
         float imaginary = gain * cuCimagf(vevid_image[i]);
         float original = (float)image[i];
         float temp = atan2f(imaginary, original);
+        vevid_image[i].x = temp; 
         temp = (temp - min) / (max - min);
         image[i] = static_cast<uint8_t>(temp * 255);
     }
 }
+
+__global__
+void vevid_normalize(cufftComplex* vevid_image, uint8_t* image, float max_phase, float min_phase, const size_t N) 
+{
+    int index = blockIdx.x * blockDim.x + threadIdx.x; 
+    int stride = blockDim.x * gridDim.x; 
+    for (int i = index; i < N; i += stride) {
+        float temp = vevid_image[i].x; 
+        temp = (temp - min_phase) / (max_phase - min_phase); 
+        image[i] = static_cast<uint8_t>(temp * 255); 
+    }
+}
+
+// TODO: Compute min and max from actual input. 
 
 __global__
 void vevid_phase_lite(uint8_t* input, float gain, float regularization_term, const size_t N)
@@ -254,6 +272,7 @@ void populate_real(cufftComplex* d_image, uint8_t* d_buffer, const size_t N)
     }
 }
 
+/*
 __global__
 void fftshift(cufftComplex* data, const size_t width, const size_t height) 
 {
@@ -277,9 +296,9 @@ void fftshift(cufftComplex* data, const size_t width, const size_t height)
                 data[i + (width * (height / 2)) - (width / 2)] = temp;
             }
         }
-
     }
 }
+*/
 
 __global__
 void hadamard(cufftComplex* a1, cufftComplex* a2, const size_t N)
@@ -311,6 +330,7 @@ void add(cufftComplex* input, float addend, const size_t N)
 
 }
 
+
 __global__
 void scale(cufftComplex* input, float scalar, const size_t N) 
 {
@@ -321,6 +341,7 @@ void scale(cufftComplex* input, float scalar, const size_t N)
         input[i].y = input[i].y * scalar;
     }
 }
+
 
 __global__
 void arg(cufftComplex* input, uint8_t* output, const size_t N)
