@@ -1,19 +1,12 @@
 #include <iostream>
 #include <getopt.h>
-#include <detectNet.h>
-#include <objectTracker.h>
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-#include <cudaRGB.h>
 
 #include "options.hpp"
 #include "vevid.cuh"
+#include "detect_net.hpp"
 
 using namespace std; 
 using namespace cv; 
-
-// TODO: 
-// change notation -- i_value or iValue 
 
 void print_usage(const char* program_name) {
     cout << "Usage: " << program_name << " [options]" << endl;
@@ -45,28 +38,28 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         specified = true; 
         switch (c) {
             case 'p': 
-                flags->pvalue = optarg; 
+                flags->p_value = optarg; 
                 break; 
             case 'i':
-                flags->ivalue = optarg;
+                flags->i_value = optarg;
                 break;
             case 'v':
-                flags->vvalue = optarg;
+                flags->v_value = optarg;
                 break;
             case 'w': 
-                flags->wvalue = optarg; 
+                flags->w_value = optarg; 
                 break; 
             case 'l':
-                flags->lflag = true;
+                flags->l_flag = true;
                 break;
             case 'd':
-                flags->dflag = true;
+                flags->d_flag = true;
                 break;
             case 't':
-                flags->tflag = true; 
+                flags->t_flag = true; 
                 break;
             case 'h':
-                flags->hflag = true;  
+                flags->h_flag = true;  
                 break;
             case ':':
                 cout << "option -" << (char)optopt << " requires an argument" << endl; 
@@ -81,22 +74,22 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         }
     }
 
-    if (flags->hflag == true) {
+    if (flags->h_flag == true) {
         print_usage(argv[0]); 
         exit(0); 
     }
 
-    if (flags->tflag == true) {
+    if (flags->t_flag == true) {
         cout << "Timing information will be displayed" << endl; 
     }
 
-    if (flags->ivalue != nullptr && flags->vvalue != nullptr) {
+    if (flags->i_value != nullptr && flags->v_value != nullptr) {
         cout << "both -i and -v flags specified" << endl; 
         print_usage(argv[0]); 
         exit(0); 
     }
 
-    if (flags->pvalue == nullptr) {
+    if (flags->p_value == nullptr) {
         cout << "Custom parameters not specified, using default values:" << endl; 
         cout << "   width = " << params->width << endl; 
         cout << "   height = " << params->height << endl; 
@@ -106,7 +99,7 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         cout << "   G = " << params->G << endl; 
     }
     else {
-        string input(flags->pvalue); 
+        string input(flags->p_value); 
         istringstream iss(input); 
         string token; 
 
@@ -180,171 +173,5 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         cout << "   T = " << params->T << endl;
         cout << "   b = " << params->b << endl;
         cout << "   G = " << params->G << endl;
-    }
-}
-
-void process_image(Mat& frame, Flags* flags, Params* params, bool show_detections) {
-    cout << "Running VEViD on input image " << flags->ivalue << endl; 
-
-    namedWindow("Original Image", WINDOW_NORMAL); 
-    namedWindow("VEViD-Enhanced Image", WINDOW_NORMAL); 
-
-    Vevid vevid(640,480,10,0.1,4,4); 
-
-    frame = imread(flags->ivalue); 
-
-    if (frame.empty()) {
-        cout << "Error: Could not load the input image " << endl; 
-        exit(1); 
-    }
-
-    uchar3* d_image; 
-    detectNet* net; 
-    if (show_detections) {
-        net = detectNet::Create("ssd-mobilenet-v2", 0.5); 
-        cudaMalloc((void**)&d_image, params->width * params->height * sizeof(uchar3));
-    }
-
-    resize(frame, frame, Size(params->width, params->height)); 
-    imshow("Original Image", frame); 
-    vevid.run(frame, false, flags->lflag); 
-
-    if (show_detections) {
-        cvtColor(frame, frame, COLOR_BGR2RGB); 
-        cudaDeviceSynchronize(); 
-        cudaMemcpy2D(d_image, params->width * sizeof(uchar3), frame.data, frame.step, params->width * sizeof(uchar3), params->height, cudaMemcpyHostToDevice);
-        detectNet::Detection* detections = NULL; 
-        const int numDetections = net->Detect(d_image, params->width, params->height, &detections);
-        cudaDeviceSynchronize(); 
-        cvtColor(frame, frame, COLOR_RGB2BGR); 
-        
-        std::chrono::steady_clock::time_point vevid_end = std::chrono::steady_clock::now(); 
-
-        if( numDetections > 0 )
-        {
-            LogVerbose("%i objects detected\n", numDetections);
-        
-            for( int n=0; n < numDetections; n++ )
-            {
-                LogVerbose("\ndetected obj %i  class #%u (%s)  confidence=%f\n", n, detections[n].ClassID, net->GetClassDesc(detections[n].ClassID), detections[n].Confidence);
-                LogVerbose("bounding box %i  (%.2f, %.2f)  (%.2f, %.2f)  w=%.2f  h=%.2f\n", n, detections[n].Left, detections[n].Top, detections[n].Right, detections[n].Bottom, detections[n].Width(), detections[n].Height()); 
-            
-                if( detections[n].TrackID >= 0 ) // is this a tracked object?
-                    LogVerbose("tracking  ID %i  status=%i  frames=%i  lost=%i\n", detections[n].TrackID, detections[n].TrackStatus, detections[n].TrackFrames, detections[n].TrackLost);
-            
-                rectangle(frame, Point(detections[n].Left, detections[n].Top), Point(detections[n].Right, detections[n].Bottom), Scalar(0, 255, 0), 2);
-            }
-        }
-    }
-
-    imshow("VEViD-Enhanced Image", frame); 
-
-    waitKey();
-
-    if (flags->wvalue != nullptr) {
-        cout << "Writing image to " << flags->wvalue << endl;
-
-        if (!imwrite(flags->wvalue, frame)) {
-            cout << "Error: Could not write the output image to " << flags->wvalue << endl; 
-            exit(1); 
-        } 
-    }
-}
-
-void process_video(VideoCapture& camera, Mat& frame, Flags* flags, Params* params, bool show_detections) {
-    cout << "Running VEViD on input video " << flags->vvalue << endl;
-
-    camera.open(flags->vvalue); 
-    if (!camera.isOpened()) {
-        cout << "Error: Could not open video file" << flags->vvalue << endl; 
-        exit(1); 
-    }
-
-    bool change_dims = false; 
-    if (camera.get(CAP_PROP_FRAME_WIDTH) != params->width ||
-        camera.get(CAP_PROP_FRAME_HEIGHT) != params->height) 
-    {
-        change_dims = true; 
-        cout << resize << endl; 
-    }
-
-    namedWindow("Original Video", WINDOW_NORMAL); 
-    namedWindow("VEViD-Enhanced Video", WINDOW_NORMAL);
-
-    VideoWriter output; 
-
-    if (flags->wvalue != nullptr) {
-        string output_path = flags->wvalue; 
-        int fourcc = VideoWriter::fourcc('a', 'v', 'c', '1'); 
-        int fps = 30; 
-        Size frame_size(params->width, params->height); 
-
-        output.open(output_path, fourcc, fps, frame_size); 
-
-        if (!output.isOpened()) {
-            cout << "Error: Could not write video to " << flags->wvalue << endl; 
-            exit(1); 
-        }
-    }
-
-    uchar3* d_image; 
-    detectNet* net; 
-    if (show_detections) {
-        net = detectNet::Create("ssd-mobilenet-v2", 0.5); 
-        cudaMalloc((void**)&d_image, params->width * params->height * sizeof(uchar3));
-    }
-
-    while (true) {
-        camera >> frame; 
-
-        if (frame.empty()) {
-            break; 
-        }
-
-        if (change_dims) {
-            resize(frame, frame, Size(params->width, params->height)); 
-        }
-
-        imshow("Original Video", frame); 
-        vevid(frame, false, flags->lflag); 
-
-        if (show_detections) {
-            cvtColor(frame, frame, COLOR_BGR2RGB); 
-            cudaDeviceSynchronize(); 
-            cudaMemcpy2D(d_image, params->width * sizeof(uchar3), frame.data, frame.step, params->width * sizeof(uchar3), params->height, cudaMemcpyHostToDevice);
-            detectNet::Detection* detections = NULL; 
-            const int numDetections = net->Detect(d_image, params->width, params->height, &detections);
-            cudaDeviceSynchronize(); 
-            cvtColor(frame, frame, COLOR_RGB2BGR); 
-            
-            std::chrono::steady_clock::time_point vevid_end = std::chrono::steady_clock::now(); 
-
-            if( numDetections > 0 )
-            {
-                LogVerbose("%i objects detected\n", numDetections);
-            
-                for( int n=0; n < numDetections; n++ )
-                {
-                    LogVerbose("\ndetected obj %i  class #%u (%s)  confidence=%f\n", n, detections[n].ClassID, net->GetClassDesc(detections[n].ClassID), detections[n].Confidence);
-                    LogVerbose("bounding box %i  (%.2f, %.2f)  (%.2f, %.2f)  w=%.2f  h=%.2f\n", n, detections[n].Left, detections[n].Top, detections[n].Right, detections[n].Bottom, detections[n].Width(), detections[n].Height()); 
-                
-                    if( detections[n].TrackID >= 0 ) // is this a tracked object?
-                        LogVerbose("tracking  ID %i  status=%i  frames=%i  lost=%i\n", detections[n].TrackID, detections[n].TrackStatus, detections[n].TrackFrames, detections[n].TrackLost);
-                
-                    rectangle(frame, Point(detections[n].Left, detections[n].Top), Point(detections[n].Right, detections[n].Bottom), Scalar(0, 255, 0), 2);
-                }
-            }
-        }
-
-        imshow("VEViD-Enhanced Video", frame); 
-        
-        if (flags->wvalue != nullptr) {
-            output.write(frame); 
-        }
-
-        char key = waitKey(1);
-        if (key == 27) {
-            break; 
-        }
     }
 }

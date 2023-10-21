@@ -1,22 +1,17 @@
-#include <opencv2/videoio.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-#include <cudaRGB.h>
-#include <cufft.h>
-#include <detectNet.h>
-#include <objectTracker.h>
-#include <signal.h>
-
 #include <iostream>
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
 #include <iomanip>
 
+#include <opencv2/videoio.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
 #include "vevid.cuh"
 #include "video.hpp"
+#include "options.hpp"
+#include "detect_net.hpp"
 
 using namespace std; 
 using namespace cv; 
@@ -40,8 +35,8 @@ void WebCam::start_capturing() {
         Mat frame; 
         m_webcam >> frame;
         unique_lock<mutex> lock(m_mutex);
-        m_new_frame = true;
         m_frame = frame; 
+        m_new_frame = true;
         lock.unlock();
         m_frame_cv.notify_one();
         m_frame_count++;
@@ -73,68 +68,37 @@ int WebCam::get_height() const {
 
 Window::Window(const string& window1_name, const string& window2_name)
     : m_window1_name(window1_name), m_window2_name(window2_name), m_exit(false), m_show_fps(false), m_frame_count(0) 
-{
-    namedWindow(m_window1_name, WINDOW_NORMAL); 
-    namedWindow(m_window2_name, WINDOW_NORMAL);
-}
+{}
 
 void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, bool show_timing, bool lite) {
 
-    vevid_init(webcam.get_width(), webcam.get_height(), 10, 0.1, 4, 4); 
-    Vevid vevid(640,480,0.8,0.01,0.2,0.1); 
+    Vevid vevid(webcam.get_width(), webcam.get_height(), 0.8, 0.01, 0.2, 0.1);
+
+    namedWindow(m_window1_name, WINDOW_NORMAL); 
+    namedWindow(m_window2_name, WINDOW_NORMAL); 
 
     uchar3* d_image; 
-    detectNet* net; 
+    DetectNet net(d_image, webcam.get_width(), webcam.get_height()); 
     if (show_detections) {
-        net = detectNet::Create("ssd-mobilenet-v2", 0.5); 
-        cudaMalloc((void**)&d_image, webcam.get_width() * webcam.get_height() * sizeof(uchar3));
+        net.create(); 
     }
-    
-
-    m_start_time = std::chrono::steady_clock::now();
 
     double vevid_time = 0; 
 
     while (!m_exit) {
-        Mat frame = webcam.get_frame();
-        
+        Mat frame; //= webcam.get_frame();
+        webcam.m_webcam >> frame; 
+
+        imshow(m_window1_name, frame);
+
+        vevid.run(frame, show_timing, lite);
+
         if (show_fps) {
             display_fps(frame); 
         }
-        imshow(m_window1_name, frame);
-
-        std::chrono::steady_clock::time_point vevid_start = std::chrono::steady_clock::now(); 
-        
-        cudaDeviceSynchronize(); 
-        vevid.run(frame, show_timing, lite);
 
         if (show_detections) {
-            cvtColor(frame, frame, COLOR_BGR2RGB); 
-            cudaDeviceSynchronize(); 
-            cudaMemcpy2D(d_image, webcam.get_width() * sizeof(uchar3), frame.data, frame.step, webcam.get_width() * sizeof(uchar3), webcam.get_height(), cudaMemcpyHostToDevice);
-            detectNet::Detection* detections = NULL; 
-            const int numDetections = net->Detect(d_image, webcam.get_width(), webcam.get_height(), &detections);
-            cudaDeviceSynchronize(); 
-            cvtColor(frame, frame, COLOR_RGB2BGR); 
-            
-            std::chrono::steady_clock::time_point vevid_end = std::chrono::steady_clock::now(); 
-            vevid_time += chrono::duration_cast<chrono::milliseconds>(vevid_end - vevid_start).count();
-
-            if( numDetections > 0 )
-            {
-                LogVerbose("%i objects detected\n", numDetections);
-            
-                for( int n=0; n < numDetections; n++ )
-                {
-                    LogVerbose("\ndetected obj %i  class #%u (%s)  confidence=%f\n", n, detections[n].ClassID, net->GetClassDesc(detections[n].ClassID), detections[n].Confidence);
-                    LogVerbose("bounding box %i  (%.2f, %.2f)  (%.2f, %.2f)  w=%.2f  h=%.2f\n", n, detections[n].Left, detections[n].Top, detections[n].Right, detections[n].Bottom, detections[n].Width(), detections[n].Height()); 
-                
-                    if( detections[n].TrackID >= 0 ) // is this a tracked object?
-                        LogVerbose("tracking  ID %i  status=%i  frames=%i  lost=%i\n", detections[n].TrackID, detections[n].TrackStatus, detections[n].TrackFrames, detections[n].TrackLost);
-                
-                    rectangle(frame, Point(detections[n].Left, detections[n].Top), Point(detections[n].Right, detections[n].Bottom), Scalar(0, 255, 0), 2);
-                }
-            }
+            net.run(frame); 
         }
         imshow(m_window2_name, frame); 
         m_frame_count++;
@@ -144,8 +108,6 @@ void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, 
             m_exit = true;
         }
     }
-
-    vevid_fini(); 
 }
 
 
@@ -168,4 +130,117 @@ void Window::display_fps(Mat& frame) {
     putText(frame, ss.str(), text_org, font_face, font_scale, Scalar(255, 255, 255), thickness);
 
     last_time = current_time;
+}
+
+void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_detections) {
+    cout << "Running VEViD on input image " << flags->i_value << endl; 
+
+    namedWindow("Original Image", WINDOW_NORMAL); 
+    namedWindow("VEViD-Enhanced Image", WINDOW_NORMAL); 
+
+    Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
+    frame = imread(flags->i_value); 
+
+    if (frame.empty()) {
+        cout << "Error: Could not load the input image " << endl; 
+        exit(1); 
+    }
+
+    resize(frame, frame, Size(params->width, params->height)); 
+    imshow("Original Image", frame); 
+    vevid.run(frame, false, flags->l_flag); 
+
+    if (show_detections) {
+        uchar3* d_image; 
+        DetectNet net(d_image, params->width, params->height); 
+        net.create(); 
+        net.run(frame); 
+    }
+
+    imshow("VEViD-Enhanced Image", frame); 
+
+    waitKey();
+
+    if (flags->w_value != nullptr) {
+        cout << "Writing image to " << flags->w_value << endl;
+
+        if (!imwrite(flags->w_value, frame)) {
+            cout << "Error: Could not write the output image to " << flags->w_value << endl; 
+            exit(1); 
+        } 
+    }
+}
+
+void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Params* params, bool show_detections) {
+    cout << "Running VEViD on input video " << flags->v_value << endl;
+
+    camera.open(flags->v_value); 
+    if (!camera.isOpened()) {
+        cout << "Error: Could not open video file" << flags->v_value << endl; 
+        exit(1); 
+    }
+
+    bool change_dims = false; 
+    if (camera.get(CAP_PROP_FRAME_WIDTH) != params->width ||
+        camera.get(CAP_PROP_FRAME_HEIGHT) != params->height) 
+    {
+        change_dims = true; 
+    }
+
+    namedWindow("Original Video", WINDOW_NORMAL); 
+    namedWindow("VEViD-Enhanced Video", WINDOW_NORMAL);
+
+    Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
+
+    VideoWriter output; 
+
+    if (flags->w_value != nullptr) {
+        string output_path = flags->w_value; 
+        int fourcc = VideoWriter::fourcc('a', 'v', 'c', '1'); 
+        int fps = 30; 
+        Size frame_size(params->width, params->height); 
+
+        output.open(output_path, fourcc, fps, frame_size); 
+
+        if (!output.isOpened()) {
+            cout << "Error: Could not write video to " << flags->w_value << endl; 
+            exit(1); 
+        }
+    }
+
+    uchar3* d_image; 
+    DetectNet net(d_image, params->width, params->height); 
+    if (show_detections) {
+        net.create(); 
+    }
+
+    while (true) {
+        camera >> frame; 
+
+        if (frame.empty()) {
+            break; 
+        }
+
+        if (change_dims) {
+            resize(frame, frame, Size(params->width, params->height)); 
+        }
+
+        imshow("Original Video", frame); 
+        vevid.run(frame, false, flags->l_flag); 
+
+        if (show_detections) {
+            net.run(frame);
+        }
+
+        imshow("VEViD-Enhanced Video", frame); 
+        
+        if (flags->w_value != nullptr) {
+            output.write(frame); 
+        }
+
+        char key = waitKey(1);
+        if (key == 27) {
+            break; 
+        }
+    }
 }

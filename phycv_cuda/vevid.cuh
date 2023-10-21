@@ -1,7 +1,9 @@
 #ifndef VEVID_CUH
 #define VEVID_CUH
 
-#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <cufft.h>
@@ -32,11 +34,12 @@ private:
     cufftComplex* d_image; 
     uint8_t* d_buffer; 
     cufftHandle m_plan; 
+    float* d_max_phase; 
+    float* d_min_phase; 
 
     // Timing values
     float t_BGRtoHSV; 
     float t_iCopy; 
-    float t_populate; 
     float t_fft; 
     float t_hadamard; 
     float t_ifft;

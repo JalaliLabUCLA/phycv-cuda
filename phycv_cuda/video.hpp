@@ -8,6 +8,8 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "options.hpp"
+
 class WebCam {
 public: 
     WebCam(int device, int width, int height); 
@@ -18,9 +20,10 @@ public:
     int get_frame_count() const; 
     int get_width() const; 
     int get_height() const; 
+    cv::VideoCapture m_webcam; 
 
 private: 
-    cv::VideoCapture m_webcam; 
+    
     int m_device; 
     int m_width; 
     int m_height; 
@@ -37,6 +40,9 @@ public:
     Window(const std::string &window1_name, const std::string& window2_name); 
     void start_display(WebCam &webcam, bool show_fps, bool show_detections, bool show_timing, bool lite); 
     void detect_objects(cv::Mat image, int width, int height);
+    void process_image(cv::Mat& frame, Flags* flags, Params* params, bool show_detections); 
+    void process_video(cv::VideoCapture& camera, cv::Mat& frame, Flags* flags, Params* params, bool show_detections);
+
 
 private: 
     void display_fps(cv::Mat& frame);
