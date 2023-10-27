@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <float.h>
+#include <stdio.h>
 
 __global__
 void init_kernel(cufftComplex* d_vevid_kernel, float S, float T, int width, int height)
@@ -191,6 +192,7 @@ void hadamard(cufftComplex* a1, cufftComplex* a2, const size_t N)
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
+
 
     for (int i = index; i < N; i += stride) {
         cufftComplex a1_val = a1[i];

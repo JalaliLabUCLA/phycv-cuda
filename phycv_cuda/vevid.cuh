@@ -48,4 +48,7 @@ private:
     float t_HSVtoBGR; 
 };
 
+
+void vevid_init(cv::Mat& image, int width, int height, float S, float T, float b, float G);
+void vevid(cv::Mat& image, bool show_timing, bool lite); 
 #endif // VEVID_H

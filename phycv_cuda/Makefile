@@ -8,6 +8,7 @@ LDFLAGS := -L/usr/lib/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu/tegra
 
 INCLUDES := -I/usr/include/opencv4 -I/usr/local/include/jetson-inference -I/usr/local/include/jetson-utils
 
+#SRCS := main_1.cpp options.cpp detect_net.cpp vevid.cu kernels.cu
 SRCS := main.cpp vevid.cu kernels.cu video.cpp options.cpp detect_net.cpp
 #SRCS := vevid.cu kernels.cu main.cpp video.cpp
 #SRCS := jetson_video.cpp vevid.cu kernels.cu

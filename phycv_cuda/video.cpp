@@ -70,10 +70,10 @@ Window::Window(const string& window1_name, const string& window2_name)
     : m_window1_name(window1_name), m_window2_name(window2_name), m_exit(false), m_show_fps(false), m_frame_count(0) 
 {}
 
-void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, bool show_timing, bool lite) {
+void Window::start_display(WebCam& webcam, Params* params, bool show_fps, bool show_detections, bool show_timing, bool lite) {
 
-    Vevid vevid(webcam.get_width(), webcam.get_height(), 0.8, 0.01, 0.2, 0.1);
-
+    //Vevid vevid(webcam.get_width(), webcam.get_height(), 0.8, 0.01, 0.2, 0.1);
+    //vevid_init(webcam.get_width(), webcam.get_height(), 0.8, 0.01, 0.2, 0.1);
     namedWindow(m_window1_name, WINDOW_NORMAL); 
     namedWindow(m_window2_name, WINDOW_NORMAL); 
 
@@ -86,12 +86,11 @@ void Window::start_display(WebCam& webcam, bool show_fps, bool show_detections, 
     double vevid_time = 0; 
 
     while (!m_exit) {
-        Mat frame; //= webcam.get_frame();
-        webcam.m_webcam >> frame; 
+        Mat frame = webcam.get_frame();
+        //webcam.m_webcam >> frame; 
 
         imshow(m_window1_name, frame);
-
-        vevid.run(frame, show_timing, lite);
+        vevid_init(frame, webcam.get_width(), webcam.get_height(), params->S, params->T, params->b, params->G);
 
         if (show_fps) {
             display_fps(frame); 
@@ -138,7 +137,7 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
     namedWindow("Original Image", WINDOW_NORMAL); 
     namedWindow("VEViD-Enhanced Image", WINDOW_NORMAL); 
 
-    Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
+    //Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
     frame = imread(flags->i_value); 
 
     if (frame.empty()) {
@@ -148,7 +147,7 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
 
     resize(frame, frame, Size(params->width, params->height)); 
     imshow("Original Image", frame); 
-    vevid.run(frame, false, flags->l_flag); 
+    vevid_init(frame, params->width, params->height, params->S, params->T, params->b, params->G); 
 
     if (show_detections) {
         uchar3* d_image; 
@@ -187,10 +186,11 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
         change_dims = true; 
     }
 
-    namedWindow("Original Video", WINDOW_NORMAL); 
-    namedWindow("VEViD-Enhanced Video", WINDOW_NORMAL);
-
-    Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
+    if (flags->w_value == nullptr) {
+        namedWindow("Original Video", WINDOW_NORMAL); 
+        namedWindow("VEViD-Enhanced Video", WINDOW_NORMAL);
+    }
+    //Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
 
     VideoWriter output; 
 
@@ -225,14 +225,19 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
             resize(frame, frame, Size(params->width, params->height)); 
         }
 
-        imshow("Original Video", frame); 
-        vevid.run(frame, false, flags->l_flag); 
+        if (flags->w_value == nullptr) {
+            imshow("Original Video", frame); 
+        }
+    
+        vevid_init(frame, params->width, params->height, params->S, params->T, params->b, params->G); 
 
         if (show_detections) {
             net.run(frame);
         }
 
-        imshow("VEViD-Enhanced Video", frame); 
+        if (flags->w_value == nullptr) {
+            imshow("VEViD-Enhanced Video", frame); 
+        }
         
         if (flags->w_value != nullptr) {
             output.write(frame); 
