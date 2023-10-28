@@ -47,6 +47,7 @@ using namespace std;
         result = static_cast<double>(elapsed.count());                                      \
     } while (0)
 
+
 Vevid::Vevid(int width, int height, float S, float T, float b, float G)
 : m_width(width), m_height(height), m_S(S), m_T(T), m_b(b), m_G(G), d_vevid_kernel(nullptr), d_image(nullptr), d_buffer(nullptr), d_max_phase(nullptr), d_min_phase(nullptr),
 t_BGRtoHSV(0), t_iCopy(0), t_fft(0), t_hadamard(0), t_ifft(0), t_phase(0), t_oCopy(0), t_HSVtoBGR(0)
@@ -58,7 +59,7 @@ t_BGRtoHSV(0), t_iCopy(0), t_fft(0), t_hadamard(0), t_ifft(0), t_phase(0), t_oCo
     cudaMalloc((void**)&d_buffer, N * sizeof(uint8_t)); 
     cufftPlan2d(&m_plan, m_height, m_width, CUFFT_C2C); 
 
-    cudaMalloc((void**)&d_max_phase, sizeof(float)); 
+    cudaMalloc((void**)&d_max_phase, sizeof(float)); // TODO: void** needed?
     cudaMalloc((void**)&d_min_phase, sizeof(float)); 
     cudaMemset(d_max_phase, -100, sizeof(float)); // less than PI / 2
     cudaMemset(d_min_phase, 100, sizeof(float)); // greater than PI / 2
@@ -71,7 +72,7 @@ t_BGRtoHSV(0), t_iCopy(0), t_fft(0), t_hadamard(0), t_ifft(0), t_phase(0), t_oCo
     cudaMalloc((void**)&d_max, sizeof(float));  
     init_kernel<<<grid_size, block_size>>>(d_vevid_kernel, S, T, m_width, m_height); 
     max_reduce<<<64, block_size, block_size * sizeof(float)>>>(d_vevid_kernel, d_max, N);
-    cudaMemcpy(&max_val, d_max, sizeof(float), cudaMemcpyDeviceToHost);  
+    cudaMemcpy(&max_val, d_max, sizeof(float), cudaMemcpyDeviceToHost);                 //TODO: change to gpu values
     scale_exp<<<grid_size, block_size>>>(d_vevid_kernel, (S / max_val), N);
     fftshift<<<grid_size, block_size>>>(d_vevid_kernel, m_width, m_height);
     cudaFree(d_max); 
@@ -112,19 +113,17 @@ void Vevid::run(cv::Mat& image, bool show_timing, bool lite)
     
     // Get phase
     MEASURE_GPU_TIME((phase<<<grid_size, block_size>>>(d_image, d_buffer, m_G, N)), t_phase);
-    //cudaDeviceSynchronize();  
-    //MEASURE_GPU_TIME(cudaMemset(d_max_phase, -10, sizeof(float)), t_phase); // less than PI / 2
-    //MEASURE_GPU_TIME(cudaMemset(d_min_phase, 10, sizeof(float)), t_phase); // greater than PI / 2
-    //cudaDeviceSynchronize(); 
-    //MEASURE_GPU_TIME((min_max_reduce<<<64, block_size, block_size * sizeof(float)>>>(d_image, d_max_phase, d_min_phase, N)), t_phase);
-    //cudaDeviceSynchronize();  
-    //float max_val; 
-    //float min_val; 
-    //MEASURE_GPU_TIME(cudaMemcpy(&max_val, d_max_phase, sizeof(float), cudaMemcpyDeviceToHost), t_phase); 
-    //MEASURE_GPU_TIME(cudaMemcpy(&min_val, d_min_phase, sizeof(float), cudaMemcpyDeviceToHost), t_phase); 
-    //cout << "Max: " << max_val << endl; 
-    //cout << "Min: " << min_val << endl; 
-    MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image, d_buffer, 0, -M_PI / 2.0f, N)), t_phase); 
+
+    MEASURE_GPU_TIME(cudaMemset(d_max_phase, -10, sizeof(float)), t_phase); // less than PI / 2
+    MEASURE_GPU_TIME(cudaMemset(d_min_phase, 10, sizeof(float)), t_phase); // greater than PI / 2
+    MEASURE_GPU_TIME((min_max_reduce<<<64, block_size, block_size * sizeof(float)>>>(d_image, d_max_phase, d_min_phase, N)), t_phase);
+    float max_val; 
+    float min_val; // TODO: 
+    MEASURE_GPU_TIME(cudaMemcpy(&max_val, d_max_phase, sizeof(float), cudaMemcpyDeviceToHost), t_phase); 
+    MEASURE_GPU_TIME(cudaMemcpy(&min_val, d_min_phase, sizeof(float), cudaMemcpyDeviceToHost), t_phase); 
+    cout << "Max: " << max_val << endl; 
+    cout << "Min: " << min_val << endl; 
+    MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image, d_buffer, max_val, min_val, N)), t_phase); 
     MEASURE_GPU_TIME(cudaMemcpy(idata, d_buffer, N * sizeof(uint8_t), cudaMemcpyDeviceToHost), t_oCopy); 
 
     // Merge channels and convert from HSV to BGR
@@ -133,7 +132,6 @@ void Vevid::run(cv::Mat& image, bool show_timing, bool lite)
 
     auto vevid_stop = chrono::high_resolution_clock::now(); 
     chrono::duration<float, milli> total = vevid_stop - vevid_start; 
-
 
     if (show_timing) {
         cout << "Timing Results: " << endl; 

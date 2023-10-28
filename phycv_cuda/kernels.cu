@@ -184,6 +184,7 @@ void populate(cufftComplex* d_image, uint8_t* d_buffer, float b, const size_t N)
         float temp = d_buffer[i];
         temp = (temp / 255.0f) + b;
         d_image[i].x = temp; 
+        d_image[i].y = 0.0f; // BUG FIX HERE -- MUST RESET COMPLEX VALUE TO 0
     }
 }
 
@@ -222,7 +223,7 @@ void phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N
 }
 
 __global__
-void norm(cufftComplex* d_image, uint8_t* d_buffer, float max_phase, float min_phase, int N)
+void norm(cufftComplex* d_image, uint8_t* d_buffer, float max_phase, float min_phase, int N) // TODO: change function signature to expect float* 
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x; 
     int stride = blockDim.x * gridDim.x; 

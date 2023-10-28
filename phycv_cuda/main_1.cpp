@@ -19,16 +19,18 @@ int main(int argc, char** argv) {
 
     process_args(argc, argv, &flags, &params); 
 
+    Vevid vevid(params.width, params.height, params.S, params.T, params.b, params.G);
+
+
     namedWindow("Original", WINDOW_NORMAL); 
     namedWindow("VEViD-Enhanced", WINDOW_NORMAL); 
-    vevid_init(params.width, params.height, params.S, params.T, params.b, params.G); 
 
     if (flags.i_value != nullptr) {
         cout << flags.i_value << endl; 
         Mat frame = imread(flags.i_value); 
         resize(frame, frame, Size(params.width, params.height)); 
         imshow("Original", frame); 
-        vevid(frame, false, false); 
+        vevid.run(frame, false, false); 
         imshow("VEViD-Enhanced", frame); 
         waitKey(); 
 
@@ -36,12 +38,12 @@ int main(int argc, char** argv) {
         resize(frame, frame, Size(params.width, params.height)); 
         imshow("Original", frame); 
         Mat output_frame = frame.clone(); 
-        vevid(output_frame, false, false); 
+        vevid.run(output_frame, false, false); 
         imshow("VEViD-Enhanced", output_frame); 
         waitKey(); 
         return 0; 
     }
-
+    
     if (flags.v_value != nullptr) {
         return 0; 
     }

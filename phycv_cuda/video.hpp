@@ -38,7 +38,7 @@ private:
 class Window {
 public:
     Window(const std::string &window1_name, const std::string& window2_name); 
-    void start_display(WebCam &webcam, Params* params, bool show_fps, bool show_detections, bool show_timing, bool lite); 
+    void process_camera(WebCam &webcam, Params* params, bool show_fps, bool show_detections, bool show_timing, bool lite); 
     void detect_objects(cv::Mat image, int width, int height);
     void process_image(cv::Mat& frame, Flags* flags, Params* params, bool show_detections); 
     void process_video(cv::VideoCapture& camera, cv::Mat& frame, Flags* flags, Params* params, bool show_detections);
