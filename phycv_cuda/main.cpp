@@ -12,17 +12,14 @@
 using namespace std;
 using namespace cv;
 
-// TODO: Resolve OO Vevid issues -- if not possible, revert to old version and solve fft scaling issue. 
-
 int main(int argc, char** argv) {
     
-    Flags flags; 
-    Params params; 
+    Flags flags;
+    Params params;
 
     process_args(argc, argv, &flags, &params); 
 
     WebCam webcam(0, params.width, params.height); 
-    cout << "Width: " << params.width << ", Height: " << params.height << endl; 
     Window window("Original Video", "VEViD-Enhanced Video");
 
     Mat frame; 

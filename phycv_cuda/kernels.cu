@@ -223,7 +223,20 @@ void phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N
 }
 
 __global__
-void norm(cufftComplex* d_image, uint8_t* d_buffer, float max_phase, float min_phase, int N) // TODO: change function signature to expect float* 
+void vevid_phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N)
+{
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (int i = index; i < N; i += stride) {
+        float imaginary_approx = -gain * cuCrealf(vevid_image[i]); 
+        float original = (float)image[i] / 255.0f; 
+        float temp = atan2f(imaginary_approx, original); 
+        vevid_image[i].x = temp; 
+    }
+}
+
+__global__
+void norm(cufftComplex* d_image, uint8_t* d_buffer, float max_phase, float min_phase, int N)
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x; 
     int stride = blockDim.x * gridDim.x; 

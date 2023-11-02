@@ -19,11 +19,11 @@ using namespace cv;
 WebCam::WebCam(int device, int width, int height)
     : m_device(device), m_width(width), m_height(height), m_frame_count(0), m_exit(false), m_new_frame(false) 
 {
-        m_webcam.open(m_device, CAP_V4L2);
-        m_webcam.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
-        m_webcam.set(CAP_PROP_FRAME_WIDTH, m_width);
-        m_webcam.set(CAP_PROP_FRAME_HEIGHT, m_height);
-        m_webcam.set(CAP_PROP_FPS, 30); 
+    m_webcam.open(m_device, CAP_V4L2);
+    m_webcam.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    m_webcam.set(CAP_PROP_FRAME_WIDTH, m_width);
+    m_webcam.set(CAP_PROP_FRAME_HEIGHT, m_height);
+    m_webcam.set(CAP_PROP_FPS, 30);
 }
 
 WebCam::~WebCam() {
@@ -82,11 +82,8 @@ void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool 
         net.create(); 
     }
 
-    double vevid_time = 0; 
-
     while (!m_exit) {
         Mat frame = webcam.get_frame();
-        //webcam.m_webcam >> frame; 
 
         imshow(m_window1_name, frame);
         vevid.run(frame, show_timing, lite);
@@ -146,7 +143,7 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
 
     resize(frame, frame, Size(params->width, params->height)); 
     imshow("Original Image", frame); 
-    vevid.run(frame, false, flags->l_flag); 
+    vevid.run(frame, flags->t_flag, flags->l_flag); 
 
     if (show_detections) {
         uchar3* d_image; 
@@ -172,70 +169,70 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
 void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Params* params, bool show_detections) {
     cout << "Running VEViD on input video " << flags->v_value << endl;
 
-    camera.open(flags->v_value); 
+    camera.open(flags->v_value);
     if (!camera.isOpened()) {
-        cout << "Error: Could not open video file" << flags->v_value << endl; 
-        exit(1); 
+        cout << "Error: Could not open video file" << flags->v_value << endl;
+        exit(1);
     }
 
-    bool change_dims = false; 
+    bool change_dims = false;
     if (camera.get(CAP_PROP_FRAME_WIDTH) != params->width ||
-        camera.get(CAP_PROP_FRAME_HEIGHT) != params->height) 
+        camera.get(CAP_PROP_FRAME_HEIGHT) != params->height)
     {
-        change_dims = true; 
+        change_dims = true;
     }
 
     if (flags->w_value == nullptr) {
-        namedWindow("Original Video", WINDOW_NORMAL); 
+        namedWindow("Original Video", WINDOW_NORMAL);
         namedWindow("VEViD-Enhanced Video", WINDOW_NORMAL);
     }
-    Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
+    Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G);
 
-    VideoWriter output; 
+    VideoWriter output;
 
     if (flags->w_value != nullptr) {
-        string output_path = flags->w_value; 
-        int fourcc = VideoWriter::fourcc('a', 'v', 'c', '1'); 
-        int fps = 30; 
-        Size frame_size(params->width, params->height); 
+        string output_path = flags->w_value;
+        int fourcc = VideoWriter::fourcc('a', 'v', 'c', '1');
+        int fps = 30;
+        Size frame_size(params->width, params->height);
 
-        output.open(output_path, fourcc, fps, frame_size); 
+        output.open(output_path, fourcc, fps, frame_size);
 
         if (!output.isOpened()) {
-            cout << "Error: Could not write video to " << flags->w_value << endl; 
+            cout << "Error: Could not write video to " << flags->w_value << endl;
             exit(1); 
         }
     }
 
-    uchar3* d_image; 
-    DetectNet net(d_image, params->width, params->height); 
+    uchar3* d_image;
+    DetectNet net(d_image, params->width, params->height);
     if (show_detections) {
-        net.create(); 
+        net.create();
     }
 
     while (true) {
-        camera >> frame; 
+        camera >> frame;
 
         if (frame.empty()) {
-            break; 
+            break;
         }
 
         if (change_dims) {
-            resize(frame, frame, Size(params->width, params->height)); 
+            resize(frame, frame, Size(params->width, params->height));
         }
 
         if (flags->w_value == nullptr) {
-            imshow("Original Video", frame); 
+            imshow("Original Video", frame);
         }
     
-        vevid.run(frame, false, flags->l_flag); 
+        vevid.run(frame, flags->t_flag, flags->l_flag);
 
         if (show_detections) {
             net.run(frame);
         }
 
         if (flags->w_value == nullptr) {
-            imshow("VEViD-Enhanced Video", frame); 
+            imshow("VEViD-Enhanced Video", frame);
         }
         
         if (flags->w_value != nullptr) {
@@ -244,7 +241,7 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
 
         char key = waitKey(1);
         if (key == 27) {
-            break; 
+            break;
         }
     }
 }

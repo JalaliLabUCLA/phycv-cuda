@@ -16,6 +16,7 @@ __global__ void fftshift(cufftComplex* d_vevid_kernel, const size_t width, const
 __global__ void populate(cufftComplex* d_image, uint8_t* d_buffer, float b, const size_t N);
 __global__ void hadamard(cufftComplex* a1, cufftComplex* a2, const size_t N);
 __global__ void phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N);
+__global__ void vevid_phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N);
 __global__ void norm(cufftComplex* d_image, uint8_t* d_buffer, float max_phase, float min_phase, int N);
 
 #endif

@@ -26,6 +26,13 @@ PhyCV CUDA holds the source files needed to run the C++/CUDA versions of the [Ph
 
 - `assets`: sample input images/videos, sample results, documentations.
 - `phycv_cuda`: source code of PhyCV CUDA.
+TODO: explain pairs of files, namely their purpose / relationship to each other. 
+
+## Get Started
+
+### Platforms 
+- This repo is tested on NVIDIA Jetson Nano 4GB, Jetpack: 4.6.4, CUDA: 10.2.300, OpenCV: 4.1.1 TODO: Format this bullet point
+- TODO: Add link to Jetson Inference Repo instructions to configure and build for Jetson Nano
 
 ## Installation
 
@@ -49,3 +56,4 @@ git clone https://github.com/TaejusYee2001/PhyCV_CUDA.git
   ```
   ./vevid
   ```
+  TODO: 3 examples, run image, run video, run camera, explain options (object detection, vevid lite, reading/writing video, display timing values, change algorithm parameters etc...)

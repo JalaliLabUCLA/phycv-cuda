@@ -8,9 +8,32 @@
 #include <device_launch_parameters.h>
 #include <cufft.h>
 
-void vevid_init(int width, int height, float phase_strength, float spectral_phase_variance, float regularization_term, float phase_activation_gain);
-void vevid(cv::Mat& image, bool show_timing, bool lite);
-void vevid_fini();
+#define MEASURE_GPU_TIME(func, result)                                                      \
+    do                                                                                      \
+    {                                                                                       \
+        cudaEvent_t startEvent, stopEvent;                                                  \
+        cudaEventCreate(&startEvent);                                                       \
+        cudaEventCreate(&stopEvent);                                                        \
+        cudaEventRecord(startEvent);                                                        \
+        func;                                                                               \
+        cudaEventRecord(stopEvent);                                                         \
+        cudaEventSynchronize(stopEvent);                                                    \
+        float milliseconds = 0;                                                             \
+        cudaEventElapsedTime(&milliseconds, startEvent, stopEvent);                         \
+        result += static_cast<float>(milliseconds);                                         \
+        cudaEventDestroy(startEvent);                                                       \
+        cudaEventDestroy(stopEvent);                                                        \
+    } while (0)
+
+#define MEASURE_CPU_TIME(func, result)                                                      \
+    do                                                                                      \
+    {                                                                                       \
+        auto start = chrono::high_resolution_clock::now();                                  \
+        func;                                                                               \
+        auto stop = std::chrono::high_resolution_clock::now();                              \
+        chrono::duration<float, milli> elapsed = stop - start;                              \
+        result = static_cast<double>(elapsed.count());                                      \
+    } while (0)
 
 
 class Vevid {
@@ -48,7 +71,4 @@ private:
     float t_HSVtoBGR; 
 };
 
-
-void vevid_init(cv::Mat& image, int width, int height, float S, float T, float b, float G);
-void vevid(cv::Mat& image, bool show_timing, bool lite); 
 #endif // VEVID_H

@@ -33,22 +33,22 @@ void print_usage(const char* program_name) {
 
 void process_args(int argc, char* argv[], Flags* flags, Params* params) {
     int c;
-    bool specified = false; 
+    bool specified = false;
     while ((c = getopt(argc, argv, ":p:i:v:w:ldth")) != -1) {
-        specified = true; 
+        specified = true;
         switch (c) {
-            case 'p': 
-                flags->p_value = optarg; 
-                break; 
+            case 'p':
+                flags->p_value = optarg;
+                break;
             case 'i':
                 flags->i_value = optarg;
                 break;
             case 'v':
                 flags->v_value = optarg;
                 break;
-            case 'w': 
-                flags->w_value = optarg; 
-                break; 
+            case 'w':
+                flags->w_value = optarg;
+                break;
             case 'l':
                 flags->l_flag = true;
                 break;
@@ -56,114 +56,114 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
                 flags->d_flag = true;
                 break;
             case 't':
-                flags->t_flag = true; 
+                flags->t_flag = true;
                 break;
             case 'h':
-                flags->h_flag = true;  
+                flags->h_flag = true;
                 break;
             case ':':
-                cout << "option -" << (char)optopt << " requires an argument" << endl; 
-                print_usage(argv[0]); 
-                exit(0); 
+                cout << "option -" << (char)optopt << " requires an argument" << endl;
+                print_usage(argv[0]);
+                exit(0);
             case '?':
-                cout << "option -" << (char)optopt << " is not a valid option" << endl; 
-                print_usage(argv[0]); 
-                exit(0); 
+                cout << "option -" << (char)optopt << " is not a valid option" << endl;
+                print_usage(argv[0]);
+                exit(0);
             default:
                 abort();
         }
     }
 
     if (flags->h_flag == true) {
-        print_usage(argv[0]); 
-        exit(0); 
+        print_usage(argv[0]);
+        exit(0);
     }
 
     if (flags->t_flag == true) {
-        cout << "Timing information will be displayed" << endl; 
+        cout << "Timing information will be displayed" << endl;
     }
 
     if (flags->i_value != nullptr && flags->v_value != nullptr) {
-        cout << "both -i and -v flags specified" << endl; 
-        print_usage(argv[0]); 
-        exit(0); 
+        cout << "both -i and -v flags specified" << endl;
+        print_usage(argv[0]);
+        exit(0);
     }
 
     if (flags->p_value == nullptr) {
-        cout << "Custom parameters not specified, using default values:" << endl; 
-        cout << "   width = " << params->width << endl; 
-        cout << "   height = " << params->height << endl; 
-        cout << "   S = " << params->S << endl; 
-        cout << "   T = " << params->T << endl; 
-        cout << "   b = " << params->b <<endl; 
-        cout << "   G = " << params->G << endl; 
+        cout << "Custom parameters not specified, using default values:" << endl;
+        cout << "   width = " << params->width << endl;
+        cout << "   height = " << params->height << endl;
+        cout << "   S = " << params->S << endl;
+        cout << "   T = " << params->T << endl;
+        cout << "   b = " << params->b << endl;
+        cout << "   G = " << params->G << endl;
     }
     else {
-        string input(flags->p_value); 
-        istringstream iss(input); 
-        string token; 
+        string input(flags->p_value);
+        istringstream iss(input);
+        string token;
 
-        int int_count = 0; 
-        int float_count = 0; 
+        int int_count = 0;
+        int float_count = 0;
 
         while(getline(iss, token, ',')) {
             if (int_count < 2) {
-                int int_value; 
+                int int_value;
                 try {
-                    int_value = stoi(token); 
+                    int_value = stoi(token);
                 }
                 catch (const invalid_argument& e) {
-                    cout << "Invalid integer value in custom parameters: " << token << endl; 
-                    print_usage(argv[0]); 
-                    exit(0); 
+                    cout << "Invalid integer value in custom parameters: " << token << endl;
+                    print_usage(argv[0]);
+                    exit(0);
                 }
                 switch (int_count) {
-                    case 0: 
-                        params->width = int_value; 
-                        break; 
-                    case 1: 
-                        params->height = int_value; 
-                        break; 
+                    case 0:
+                        params->width = int_value;
+                        break;
+                    case 1:
+                        params->height = int_value;
+                        break;
                 }
-                int_count++; 
+                int_count++;
             }
             else if (float_count < 4) {
-                float float_value; 
+                float float_value;
                 try {
-                    float_value = stof(token); 
+                    float_value = stof(token);
                 }
                 catch (const invalid_argument& e) {
-                    cout << "Invalid float value in custom parameters: " << token << endl; 
-                    print_usage(argv[0]); 
-                    exit(0); 
+                    cout << "Invalid float value in custom parameters: " << token << endl;
+                    print_usage(argv[0]);
+                    exit(0);
                 }
                 switch (float_count) {
-                    case 0: 
-                        params->S = float_value; 
-                        break; 
-                    case 1: 
-                        params->T = float_value; 
-                        break; 
-                    case 2: 
-                        params->b = float_value; 
-                        break; 
+                    case 0:
+                        params->S = float_value;
+                        break;
+                    case 1:
+                        params->T = float_value;
+                        break;
+                    case 2:
+                        params->b = float_value;
+                        break;
                     case 3:
-                        params->G = float_value; 
-                        break; 
+                        params->G = float_value;
+                        break;
                 }
-                float_count++; 
+                float_count++;
             }
             else {
-                cout << "Too many custom parameters" << endl; 
-                print_usage(argv[0]); 
-                exit(0); 
+                cout << "Too many custom parameters" << endl;
+                print_usage(argv[0]);
+                exit(0);
             }
         }
 
         if (int_count != 2 || float_count != 4) {
-            cout << "Too few custom parameters" << endl; 
-            print_usage(argv[0]); 
-            exit(0); 
+            cout << "Too few custom parameters" << endl;
+            print_usage(argv[0]);
+            exit(0);
         }
 
         cout << "Custom parameters specified, using:" << endl;
