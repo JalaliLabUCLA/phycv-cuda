@@ -63,7 +63,7 @@ git clone https://github.com/TaejusYee2001/PhyCV_CUDA.git
   make
   ```
   **Run Examples**
-  To print the program usage, run
+  - To print the program usage, run
   ```
   ./vevid -h
   ```
