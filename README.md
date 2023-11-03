@@ -79,3 +79,4 @@ git clone https://github.com/TaejusYee2001/PhyCV_CUDA.git
     ```
     ./vevid
     ```
+  - To run object detection, VEViD-Lite, or print timing info, use the ```-d```, ```-l```, and ```-t``` flags respectively. 
