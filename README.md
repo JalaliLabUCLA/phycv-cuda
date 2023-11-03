@@ -62,8 +62,9 @@ git clone https://github.com/TaejusYee2001/PhyCV_CUDA.git
   cd phycv_cuda
   make
   ```
-  **Run**
+  **Run Examples**
+  To print the program usage, run
   ```
-  ./vevid
+  ./vevid -h
   ```
   TODO: 3 examples, run image, run video, run camera, explain options (object detection, vevid lite, reading/writing video, display timing values, change algorithm parameters etc...)
