@@ -36,8 +36,11 @@ PhyCV CUDA holds the source files needed to run the C++/CUDA versions of the [Ph
 ## Get Started
 
 ### Platforms 
-- This repo is tested on NVIDIA Jetson Nano 4GB, Jetpack: 4.6.4, CUDA: 10.2.300, OpenCV: 4.1.1 TODO: Format this bullet point
-- TODO: Add link to Jetson Inference Repo instructions to configure and build for Jetson Nano
+- This repo is tested on NVIDIA Jetson Nano 4GB with the following versions:
+  - Jetpack: 4.6.4
+  - CUDA: 10.2.300
+  - OpenCV: 4.1.1
+- This project requires the Jetson Inference library for object detection. Clone the repository and build the project from source following the instructions [here](https://github.com/dusty-nv/jetson-inference/blob/master/docs/building-repo-2.md)
 
 ## Installation
 
