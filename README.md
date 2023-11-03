@@ -12,6 +12,8 @@ Welcome to PhyCV CUDA! In this repository, you can find the source code needed t
 
 * [Folder Structure](#folder-structure)
 
+* [Get Started](#get-started)
+
 * [Installation](#installation)
 
 * [Algorithms](#algorithms)
