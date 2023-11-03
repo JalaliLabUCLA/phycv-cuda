@@ -94,8 +94,8 @@ void Vevid::run(cv::Mat& image, bool show_timing, bool lite)
     cudaDeviceSynchronize(); 
     MEASURE_GPU_TIME((min_max_reduce<<<64, block_size, block_size * sizeof(float)>>>(d_image, d_max_phase, d_min_phase, N)), t_phase);
     cudaDeviceSynchronize();
-    MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image, d_buffer, *d_max_phase, *d_min_phase, N)), t_phase); 
-    //MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image, d_buffer, 0, -M_PI / 2, N)), t_phase); 
+    //MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image, d_buffer, *d_max_phase, *d_min_phase, N)), t_phase); 
+    MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image, d_buffer, 0, -M_PI / 2, N)), t_phase); 
     MEASURE_GPU_TIME(cudaMemcpy(idata, d_buffer, N * sizeof(uint8_t), cudaMemcpyDeviceToHost), t_oCopy); 
 
     // Merge channels and convert from HSV to BGR
