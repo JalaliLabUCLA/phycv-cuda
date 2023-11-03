@@ -26,8 +26,11 @@ PhyCV CUDA holds the source files needed to run the C++/CUDA versions of the [Ph
 
 - `assets`: This folder contains sample input images/videos, sample results, documentations.
 - `phycv_cuda`: This folder contains the source code of PhyCV CUDA.
-  - `main.cpp`: This file serves as the entry point for the application. 
-TODO: explain pairs of files, namely their purpose / relationship to each other. 
+  - `main.cpp`: This file serves as the entry point for the application.
+  - `options.cpp`: This file processes command-line options.
+  - `video.cpp`: This file contains code for running the VEViD algorithm on input images, videos, and camera feeds.
+  - `vevid.cu`: This file provides the implementation of the vevid algorithm.
+  - `kernels.cu`: This file provides the implementations of the CUDA kernels required to run the vevid algorithm. 
 
 ## Get Started
 
