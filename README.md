@@ -63,8 +63,19 @@ git clone https://github.com/TaejusYee2001/PhyCV_CUDA.git
   make
   ```
   **Run Examples**
-  - To print the program usage, run
+  - To print the program usage, run: 
     ```
     ./vevid -h
     ```
-  TODO: 3 examples, run image, run video, run camera, explain options (object detection, vevid lite, reading/writing video, display timing values, change algorithm parameters etc...)
+  - To run VEViD on a test input image and save it to disk, run:
+    ```
+    ./vevid -i ../assets/input_images/dark_road.jpeg -w ../assets/output_images/enhanced_dark_road.jpeg
+    ```
+  - To run VEViD on a test input video and save it to disk, run:
+    ```
+    ./vevid -v ../assets/input_videos/video_campus.mp4 -w ../assets/output_videos/enhanced_video_campus.mp4
+    ```
+  - To run VEViD on an input camera feed, run:
+    ```
+    ./vevid
+    ```
