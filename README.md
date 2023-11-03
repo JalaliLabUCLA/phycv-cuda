@@ -24,8 +24,9 @@ PhyCV CUDA holds the source files needed to run the C++/CUDA versions of the [Ph
 
 ## Folder Structure
 
-- `assets`: sample input images/videos, sample results, documentations.
-- `phycv_cuda`: source code of PhyCV CUDA.
+- `assets`: This folder contains sample input images/videos, sample results, documentations.
+- `phycv_cuda`: This folder contains the source code of PhyCV CUDA.
+  - `main.cpp`: This file serves as the entry point for the application. 
 TODO: explain pairs of files, namely their purpose / relationship to each other. 
 
 ## Get Started
