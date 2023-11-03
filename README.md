@@ -29,6 +29,7 @@ PhyCV CUDA holds the source files needed to run the C++/CUDA versions of the [Ph
   - `main.cpp`: This file serves as the entry point for the application.
   - `options.cpp`: This file processes command-line options.
   - `video.cpp`: This file contains code for running the VEViD algorithm on input images, videos, and camera feeds.
+  - `detect_net.cpp`: This file uses the Jetson Inference library to run object detection on output images, videos, and camera feeds. 
   - `vevid.cu`: This file provides the implementation of the vevid algorithm.
   - `kernels.cu`: This file provides the implementations of the CUDA kernels required to run the vevid algorithm. 
 
