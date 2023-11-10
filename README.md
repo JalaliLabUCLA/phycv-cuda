@@ -75,8 +75,8 @@ See all the options from the command line:
 
 Other Usages:
 
-- To enable object detection, add `-d` flag to the command
+- To enable object detection, add `-d` flag to the command.
 
-- To display timing information, add `-t` flag to the command
+- To display timing information, add `-t` flag to the command.
 
 - To enable `VEViD-Lite`, add `-l` flag to the command.
