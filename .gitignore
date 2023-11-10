@@ -1,0 +1,11 @@
+# Ignore object files
+*.o
+
+# Ignore executables
+vevid
+
+# build folder
+build
+
+# output results
+output
