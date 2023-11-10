@@ -15,10 +15,13 @@ SRCS := $(wildcard $(SRC_DIR)/*.cu) $(wildcard $(SRC_DIR)/*.cpp)
 OBJS := $(patsubst $(SRC_DIR)/%.cu,$(BUILD_DIR)/%.o,$(SRCS))
 TARGET := vevid
 
-all: $(TARGET)
+all: $(BUILD_DIR) $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $^ -o $@ $(LIBS)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
@@ -26,5 +29,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cu
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
+
 clean:
 	rm -f $(BUILD_DIR)/*.o $(TARGET)
+
+.PHONY: clean

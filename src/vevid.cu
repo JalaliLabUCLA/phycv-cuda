@@ -92,7 +92,7 @@ void Vevid::run(Mat& image, bool show_timing, bool lite)
     MEASURE_GPU_TIME((min_max_reduce<<<64, block_size, block_size * sizeof(float)>>>(d_image_V, d_max_phase, d_min_phase, N)), t_phase);
     cudaDeviceSynchronize();
     MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image_V, d_data, *d_max_phase, *d_min_phase, N)), t_phase);  
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     // Convert from HSV to BGR
     MEASURE_GPU_TIME((HSV2BGRKernel<<<conversion_grid_size, conversion_block_size>>>(d_data, image.cols, image.rows, image.step)), t_HSVtoBGR); 
