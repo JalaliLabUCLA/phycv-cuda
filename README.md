@@ -65,7 +65,7 @@ If you want to save the processed video, indicate saving location after `-w`. No
 ./vevid -v ./assets/input_videos/video_campus.mp4 -w ./output/enhanced_campus.mp4
 ```
 
-The default parameters of VEViD are defined in `includes/options.hpp`. You can change these parameters by using the `-p` flag. Ise `-p <width>,<height>,<S>,<T>,<b>,<G>` where `width` and `height` are the processed frame size and `S, T, b, G` are your specified VEViD parameters
+The default parameters of VEViD are defined in `includes/options.hpp`. You can change these parameters by using the `-p` and `-r` flags. Use `-p <PARAM=val>` where `PARAM` is one of the VEViD parameters `S, T, b, G` and `val` is a floating point number. Use `-r <width>,<height>` to specify the processed frame size. 
 
 
 See all the options from the command line:
