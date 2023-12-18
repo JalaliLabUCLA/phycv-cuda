@@ -9,7 +9,6 @@
 #include <condition_variable>
 
 #include "options.hpp"
-#include "controls.hpp"
 
 class WebCam {
 public: 
