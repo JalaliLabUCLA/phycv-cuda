@@ -116,25 +116,6 @@ void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool 
 
         if (show_detections) {
             net.run(frame); 
-            
-            /*
-            if (m_frame_count % 2 == 0) {
-                if (((net.m_box_right + net.m_box_left) / 2) > (webcam.get_width() / 2) + (webcam.get_width() / 8)) {
-                    controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) - motor_step); 
-                }
-                else if (((net.m_box_right + net.m_box_left) / 2) < (webcam.get_width() / 2) - (webcam.get_width() / 8)){
-                    controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) + motor_step); 
-                }
-            }
-            else {
-                if (((net.m_box_top + net.m_box_bottom) / 2) > (webcam.get_height() / 2) + (webcam.get_height() / 8)) {
-                    controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) + motor_step);
-                }
-                else if (((net.m_box_top + net.m_box_bottom) / 2) < (webcam.get_height() / 2) - (webcam.get_height() / 8)) {
-                    controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) - motor_step); 
-                }
-            }
-            */
         }
 
         if (show_fps) {
@@ -145,45 +126,11 @@ void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool 
         m_frame_count++;
 
         char key = waitKey(1);
-        //control_camera(controller, key, motor_step, focus_step, zoom_step); 
         if (key == 27) {
             m_exit = true;
         }
     }
 }
-
-/*
-void Window::control_camera(Controller& controller, char key, int motor_step, int focus_step, int zoom_step) {
-    if (key == 's') {
-        controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) + motor_step); 
-    }
-    else if (key == 'w') {
-        controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) - motor_step); 
-    }
-    else if (key == 'd') {
-        controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) - motor_step); 
-    }
-    else if (key == 'a') {
-        controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) + motor_step);
-    }
-    else if (key == 'r') {
-        controller.reset(OPT_FOCUS); 
-        controller.reset(OPT_ZOOM); 
-    }
-    else if (key == 'R') {
-        controller.set(OPT_ZOOM, controller.get(OPT_ZOOM) + zoom_step); 
-    }
-    else if (key == 'T') {
-        controller.set(OPT_ZOOM, controller.get(OPT_ZOOM) - zoom_step); 
-    }
-    else if (key == 'Q') {
-        controller.set(OPT_FOCUS, controller.get(OPT_FOCUS) - focus_step); 
-    }
-    else if (key == 'S') {
-        controller.set(OPT_FOCUS, controller.get(OPT_FOCUS) + focus_step); 
-    }
-}
-*/
 
 void Window::display_fps(Mat& frame) {
     static chrono::steady_clock::time_point last_time = chrono::steady_clock::now();
