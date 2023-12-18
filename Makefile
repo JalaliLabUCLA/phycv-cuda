@@ -12,13 +12,10 @@ SRC_DIR := src
 BUILD_DIR := build
 
 PHYCV_CUDA_DIR := $(SRC_DIR)/phycv_cuda
-#PTZ_CAMERA_DIR := $(SRC_DIR)/ptz_camera
 
 PHYCV_CUDA_SRCS := $(wildcard $(PHYCV_CUDA_DIR)/*.cu) $(wildcard $(PHYCV_CUDA_DIR)/*.cpp)
-#PTZ_CAMERA_SRCS := $(wildcard $(PTZ_CAMERA_DIR)/*.cu) $(wildcard $(PTZ_CAMERA_DIR)/*.cpp)
 
 PHYCV_CUDA_OBJS := $(patsubst $(PHYCV_CUDA_DIR)/%.cu,$(BUILD_DIR)/%.o,$(PHYCV_CUDA_SRCS))
-#PTZ_CAMERA_OBJS := $(patsubst $(PTZ_CAMERA_DIR)/%.cu,$(BUILD_DIR)/%.o,$(PTZ_CAMERA_SRCS))
 
 OBJS := $(PHYCV_CUDA_OBJS) $(PTZ_CAMERA_OBJS)
 TARGET := vevid
@@ -36,12 +33,6 @@ $(BUILD_DIR)/%.o: $(PHYCV_CUDA_DIR)/%.cu
 
 $(BUILD_DIR)/%.o: $(PHYCV_CUDA_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
-
-#$(BUILD_DIR)/%.o: $(PTZ_CAMERA_DIR)/%.cu
-#	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
-
-#$(BUILD_DIR)/%.o: $(PTZ_CAMERA_DIR)/%.cpp
-#	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
 	rm -f $(BUILD_DIR)/*.o $(TARGET)
