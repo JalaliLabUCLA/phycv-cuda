@@ -20,17 +20,7 @@ using namespace cv;
 WebCam::WebCam(int device, int width, int height)
     : m_device(device), m_width(width), m_height(height), m_frame_count(0), m_exit(false), m_new_frame(false) 
 {
-    const std::string gst_str = "nvarguscamerasrc ! "
-                                "video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)NV12, framerate=(fraction)30/1 ! "
-                                "nvvidconv flip-method=2 ! "
-                                "video/x-raw, format=(string)BGRx ! "
-                                "videoconvert ! "
-                                "video/x-raw, format=(string)BGR ! "
-                                "appsink";
-
-    //m_webcam.open(m_device, CAP_V4L2);
-    //m_webcam.open(gst_str, CAP_GSTREAMER);
-    m_webcam.open(1, CAP_V4L2);
+    m_webcam.open(m_device, CAP_V4L2);
     m_webcam.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
     m_webcam.set(CAP_PROP_FRAME_WIDTH, m_width);
     m_webcam.set(CAP_PROP_FRAME_HEIGHT, m_height);
