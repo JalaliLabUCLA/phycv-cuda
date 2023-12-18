@@ -45,7 +45,7 @@ public:
 
 
 private: 
-    void control_camera(Controller& controller, char key, int motor_step, int focus_step, int zoom_step); 
+    //void control_camera(Controller& controller, char key, int motor_step, int focus_step, int zoom_step); 
     void display_fps(cv::Mat& frame);
     std::string m_window1_name;
     std::string m_window2_name;
