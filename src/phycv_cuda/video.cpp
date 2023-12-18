@@ -12,7 +12,6 @@
 #include "video.hpp"
 #include "options.hpp"
 #include "detect_net.hpp"
-//#include "controls.hpp"
 
 using namespace std; 
 using namespace cv; 
