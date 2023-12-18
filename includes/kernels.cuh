@@ -1,5 +1,5 @@
-#ifndef KERNELS_H
-#define KERNELS_H
+#ifndef KERNELS_CUH
+#define KERNELS_CUH
 
 #include <cuda_runtime.h>
 #include <stdint.h>
@@ -21,4 +21,4 @@ __global__ void phase(cufftComplex* vevid_image, uint8_t* image, float gain, con
 __global__ void vevid_phase(cufftComplex* vevid_image, uint8_t* image, float gain, const size_t N);
 __global__ void norm(cufftComplex* d_image, uint8_t* d_buffer, float max_phase, float min_phase, int N);
 
-#endif
+#endif // KERNELS_CUH

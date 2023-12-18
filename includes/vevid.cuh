@@ -71,4 +71,4 @@ private:
     float t_HSVtoBGR; 
 };
 
-#endif // VEVID_H
+#endif // VEVID_CUH

@@ -1,5 +1,5 @@
-#ifndef VIDEO_H
-#define VIDEO_H
+#ifndef VIDEO_HPP
+#define VIDEO_HPP
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
@@ -9,6 +9,7 @@
 #include <condition_variable>
 
 #include "options.hpp"
+#include "controls.hpp"
 
 class WebCam {
 public: 
@@ -45,6 +46,7 @@ public:
 
 
 private: 
+    void control_camera(Controller& controller, char key, int motor_step, int focus_step, int zoom_step); 
     void display_fps(cv::Mat& frame);
     std::string m_window1_name;
     std::string m_window2_name;
@@ -56,4 +58,4 @@ private:
     double m_total_frame_time;
 }; 
 
-#endif // VIDEO_H
+#endif // VIDEO_HPP

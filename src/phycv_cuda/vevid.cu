@@ -17,8 +17,6 @@
 using namespace cv; 
 using namespace std;
 
-// TODO: look into how timing scales for object detection with different resolutions.
-
 Vevid::Vevid(int width, int height, float S, float T, float b, float G)
 : m_width(width), m_height(height), m_S(S), m_T(T), m_b(b), m_G(G), d_data(nullptr), d_vevid_kernel(nullptr), d_image_V(nullptr), d_max_phase(nullptr), d_min_phase(nullptr),
 t_BGRtoHSV(0), t_iCopy(0), t_fft(0), t_hadamard(0), t_ifft(0), t_phase(0), t_oCopy(0), t_HSVtoBGR(0)
@@ -92,7 +90,6 @@ void Vevid::run(Mat& image, bool show_timing, bool lite)
     MEASURE_GPU_TIME((min_max_reduce<<<64, block_size, block_size * sizeof(float)>>>(d_image_V, d_max_phase, d_min_phase, N)), t_phase);
     cudaDeviceSynchronize();
     MEASURE_GPU_TIME((norm<<<grid_size, block_size>>>(d_image_V, d_data, *d_max_phase, *d_min_phase, N)), t_phase);  
-    //cudaDeviceSynchronize();
 
     // Convert from HSV to BGR
     MEASURE_GPU_TIME((HSV2BGRKernel<<<conversion_grid_size, conversion_block_size>>>(d_data, image.cols, image.rows, image.step)), t_HSVtoBGR); 

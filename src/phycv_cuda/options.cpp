@@ -1,5 +1,6 @@
 #include <iostream>
 #include <getopt.h>
+#include <string>
 
 #include "options.hpp"
 #include "vevid.cuh"
@@ -11,14 +12,18 @@ using namespace cv;
 void print_usage(const char* program_name) {
     cout << "Usage: " << program_name << " [options]" << endl;
     cout << "Options:" << endl;
-    cout << "   -p [ARGS]  : Specify input parameters (separate ARGS with commas)" << endl; 
-    cout << "       ARGS: <W>,<H>,<S>,<T>,<b>,<G>" << endl; 
+    cout << "   -p [ARGS...]  : Specify input parameters (separate ARGS with commas)" << endl; 
+    cout << "       ARGS: <PARAM=val>, where val is a float" << endl;
+    cout << "           PARAM:" << endl;  
+    cout << "               S:  Phase strength" << endl; 
+    cout << "               T:  Variance of the spectral phase function" << endl; 
+    cout << "               b:  Regularization term" << endl; 
+    cout << "               G:  Phase activation gain" << endl; 
+    cout << endl; 
+    cout << "   -r [ARGS...]   : Specify resolution" << endl; 
+    cout << "       ARGS: <W>,<H>" << endl; 
     cout << "           W (int):    Image width" << endl; 
     cout << "           H (int):    Image height" << endl; 
-    cout << "           S (float):  Phase strength" << endl; 
-    cout << "           T (float):  Variance of the spectral phase function" << endl; 
-    cout << "           b (float):  Regularization term" << endl; 
-    cout << "           G (float):  Phase activation gain" << endl; 
     cout << endl; 
     cout << "   -i <FILE>  : Run VEViD on an input image FILE" << endl;
     cout << "   -v <FILE>  : Run VEViD on on input video FILE" << endl;
@@ -34,12 +39,15 @@ void print_usage(const char* program_name) {
 void process_args(int argc, char* argv[], Flags* flags, Params* params) {
     int c;
     bool specified = false;
-    while ((c = getopt(argc, argv, ":p:i:v:w:ldth")) != -1) {
+    while ((c = getopt(argc, argv, ":p:r:i:v:w:ldth")) != -1) {
         specified = true;
         switch (c) {
             case 'p':
                 flags->p_value = optarg;
                 break;
+            case 'r': 
+                flags->r_value = optarg; 
+                break; 
             case 'i':
                 flags->i_value = optarg;
                 break;
@@ -89,6 +97,56 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         exit(0);
     }
 
+    if (flags->r_value == nullptr) {
+        cout << "Custom resolution not specified, using default values:" << endl; 
+        cout << "   width = " << params->width << endl;
+        cout << "   height = " << params->height << endl;
+    }
+    else {
+        string input(flags->r_value); 
+        istringstream iss(input); 
+        string token; 
+
+        int int_count = 0; 
+
+        while (getline(iss, token, ',')) {
+            if (int_count < 2) {
+                int int_value; 
+                try {
+                    int_value = stoi(token); 
+                }
+                catch (const invalid_argument& e) {
+                    cout << "Invalid integer value in custom resolution parameters: " << token << endl;
+                    print_usage(argv[0]);
+                    exit(0);
+                }
+                switch (int_count) {
+                    case 0:
+                        params->width = int_value;
+                        break;
+                    case 1:
+                        params->height = int_value;
+                        break;
+                }
+                int_count++;
+            }
+            else {
+                cout << "Too many custom parameters" << endl;
+                print_usage(argv[0]);
+                exit(0);
+            }
+        }
+        if (int_count != 2) {
+            cout << "Too few custom parameters" << endl;
+            print_usage(argv[0]);
+            exit(0);
+        }
+
+        cout << "Custom resolution parameters specified, using:" << endl;
+        cout << "   width = " << params->width << endl;
+        cout << "   height = " << params->height << endl;
+    }
+
     if (flags->p_value == nullptr) {
         cout << "Custom parameters not specified, using default values:" << endl;
         cout << "   width = " << params->width << endl;
@@ -107,49 +165,48 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         int float_count = 0;
 
         while(getline(iss, token, ',')) {
-            if (int_count < 2) {
-                int int_value;
-                try {
-                    int_value = stoi(token);
-                }
-                catch (const invalid_argument& e) {
-                    cout << "Invalid integer value in custom parameters: " << token << endl;
-                    print_usage(argv[0]);
-                    exit(0);
-                }
-                switch (int_count) {
-                    case 0:
-                        params->width = int_value;
-                        break;
-                    case 1:
-                        params->height = int_value;
-                        break;
-                }
-                int_count++;
-            }
-            else if (float_count < 4) {
+            
+            if (float_count < 4) {
                 float float_value;
-                try {
-                    float_value = stof(token);
-                }
-                catch (const invalid_argument& e) {
-                    cout << "Invalid float value in custom parameters: " << token << endl;
+
+                if (token[1] != '=') {
+                    cout << "Invalid parameter format" << endl;
                     print_usage(argv[0]);
                     exit(0);
                 }
-                switch (float_count) {
-                    case 0:
+
+                string float_string = token.substr(2);
+
+                try {
+                    float_value = stof(float_string);
+                }
+                catch (const invalid_argument& e) {
+                    cout << "Invalid float value in custom parameters: " << float_string << endl;
+                    print_usage(argv[0]);
+                    exit(0);
+                }
+                catch (const out_of_range& e) {
+                    cout << "Float value out of range: " << float_string << endl; 
+                    print_usage(argv[0]); 
+                    exit(0); 
+                }
+                switch (token[0]) {
+                    case 'S':
                         params->S = float_value;
                         break;
-                    case 1:
+                    case 'T':
                         params->T = float_value;
                         break;
-                    case 2:
+                    case 'b':
                         params->b = float_value;
                         break;
-                    case 3:
+                    case 'G':
                         params->G = float_value;
                         break;
+                    default: 
+                        cout << token[0] << " is not a valid parameter" << endl; 
+                        print_usage(argv[0]); 
+                        exit(0); 
                 }
                 float_count++;
             }
@@ -160,15 +217,7 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
             }
         }
 
-        if (int_count != 2 || float_count != 4) {
-            cout << "Too few custom parameters" << endl;
-            print_usage(argv[0]);
-            exit(0);
-        }
-
         cout << "Custom parameters specified, using:" << endl;
-        cout << "   width = " << params->width << endl;
-        cout << "   height = " << params->height << endl;
         cout << "   S = " << params->S << endl;
         cout << "   T = " << params->T << endl;
         cout << "   b = " << params->b << endl;

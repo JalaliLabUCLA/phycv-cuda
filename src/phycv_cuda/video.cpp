@@ -12,14 +12,26 @@
 #include "video.hpp"
 #include "options.hpp"
 #include "detect_net.hpp"
+//#include "controls.hpp"
 
 using namespace std; 
 using namespace cv; 
 
+// TODO: add option to specify CSI or USB camera in constructor. 
 WebCam::WebCam(int device, int width, int height)
     : m_device(device), m_width(width), m_height(height), m_frame_count(0), m_exit(false), m_new_frame(false) 
 {
-    m_webcam.open(m_device, CAP_V4L2);
+    const std::string gst_str = "nvarguscamerasrc ! "
+                                "video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)NV12, framerate=(fraction)30/1 ! "
+                                "nvvidconv flip-method=2 ! "
+                                "video/x-raw, format=(string)BGRx ! "
+                                "videoconvert ! "
+                                "video/x-raw, format=(string)BGR ! "
+                                "appsink";
+
+    //m_webcam.open(m_device, CAP_V4L2);
+    //m_webcam.open(gst_str, CAP_GSTREAMER);
+    m_webcam.open(1, CAP_V4L2);
     m_webcam.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
     m_webcam.set(CAP_PROP_FRAME_WIDTH, m_width);
     m_webcam.set(CAP_PROP_FRAME_HEIGHT, m_height);
@@ -36,7 +48,10 @@ void WebCam::start_capturing() {
     while (!m_exit) {
         Mat frame;
         m_webcam >> frame;
-        resize(frame, frame, cv::Size(m_width, m_height));
+        
+        if (frame.cols != m_width || frame.rows != m_height) {
+            resize(frame, frame, cv::Size(m_width, m_height));
+        }
 
         {
             std::unique_lock<std::mutex> lock(m_mutex);
@@ -78,6 +93,11 @@ Window::Window(const string& window1_name, const string& window2_name)
 
 void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool show_detections, bool show_timing, bool lite) {
 
+    //Controller controller; 
+    int motor_step = 2; 
+    int focus_step = 100; 
+    int zoom_step = 100; 
+
     Vevid vevid(webcam.get_width(), webcam.get_height(), params->S, params->T, params->b, params->G);
     namedWindow(m_window1_name, WINDOW_NORMAL); 
     namedWindow(m_window2_name, WINDOW_NORMAL); 
@@ -94,23 +114,76 @@ void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool 
         imshow(m_window1_name, frame);
         vevid.run(frame, show_timing, lite);
 
+        if (show_detections) {
+            net.run(frame); 
+            
+            /*
+            if (m_frame_count % 2 == 0) {
+                if (((net.m_box_right + net.m_box_left) / 2) > (webcam.get_width() / 2) + (webcam.get_width() / 8)) {
+                    controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) - motor_step); 
+                }
+                else if (((net.m_box_right + net.m_box_left) / 2) < (webcam.get_width() / 2) - (webcam.get_width() / 8)){
+                    controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) + motor_step); 
+                }
+            }
+            else {
+                if (((net.m_box_top + net.m_box_bottom) / 2) > (webcam.get_height() / 2) + (webcam.get_height() / 8)) {
+                    controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) + motor_step);
+                }
+                else if (((net.m_box_top + net.m_box_bottom) / 2) < (webcam.get_height() / 2) - (webcam.get_height() / 8)) {
+                    controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) - motor_step); 
+                }
+            }
+            */
+        }
+
         if (show_fps) {
             display_fps(frame); 
         }
 
-        if (show_detections) {
-            net.run(frame); 
-        }
         imshow(m_window2_name, frame); 
         m_frame_count++;
 
         char key = waitKey(1);
+        //control_camera(controller, key, motor_step, focus_step, zoom_step); 
         if (key == 27) {
             m_exit = true;
         }
     }
 }
 
+/*
+void Window::control_camera(Controller& controller, char key, int motor_step, int focus_step, int zoom_step) {
+    if (key == 's') {
+        controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) + motor_step); 
+    }
+    else if (key == 'w') {
+        controller.set(OPT_MOTOR_Y, controller.get(OPT_MOTOR_Y) - motor_step); 
+    }
+    else if (key == 'd') {
+        controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) - motor_step); 
+    }
+    else if (key == 'a') {
+        controller.set(OPT_MOTOR_X, controller.get(OPT_MOTOR_X) + motor_step);
+    }
+    else if (key == 'r') {
+        controller.reset(OPT_FOCUS); 
+        controller.reset(OPT_ZOOM); 
+    }
+    else if (key == 'R') {
+        controller.set(OPT_ZOOM, controller.get(OPT_ZOOM) + zoom_step); 
+    }
+    else if (key == 'T') {
+        controller.set(OPT_ZOOM, controller.get(OPT_ZOOM) - zoom_step); 
+    }
+    else if (key == 'Q') {
+        controller.set(OPT_FOCUS, controller.get(OPT_FOCUS) - focus_step); 
+    }
+    else if (key == 'S') {
+        controller.set(OPT_FOCUS, controller.get(OPT_FOCUS) + focus_step); 
+    }
+}
+*/
 
 void Window::display_fps(Mat& frame) {
     static chrono::steady_clock::time_point last_time = chrono::steady_clock::now();

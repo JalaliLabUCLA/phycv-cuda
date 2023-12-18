@@ -1,5 +1,5 @@
-#ifndef DETECT_NET_H
-#define DETECT_NET_H
+#ifndef DETECT_NET_HPP
+#define DETECT_NET_HPP
 
 #include <detectNet.h>
 #include <objectTracker.h>
@@ -12,6 +12,11 @@ public:
     void create(); 
     void run(cv::Mat& frame);
 
+    float m_box_left; 
+    float m_box_top; 
+    float m_box_right; 
+    float m_box_bottom; 
+
 private: 
     detectNet* m_net;
     uchar3* d_image; 
@@ -19,4 +24,4 @@ private:
     int m_height;  
 }; 
 
-#endif //  DETECT_NET_H
+#endif // DETECT_NET_HPP

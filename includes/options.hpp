@@ -1,8 +1,9 @@
-#ifndef OPTIONS_H
-#define OPTIONS_H
+#ifndef OPTIONS_HPP
+#define OPTIONS_HPP
 
 struct Flags {
     char* p_value = nullptr; 
+    char* r_value = nullptr; 
     char* i_value = nullptr; 
     char* v_value = nullptr; 
     char* w_value = nullptr; 
@@ -24,4 +25,4 @@ struct Params {
 void print_usage(const char* program_name);
 void process_args(int argc, char* argv[], Flags* flags, Params* params);
 
-#endif // OPTIONS_H
+#endif // OPTIONS_HPP
