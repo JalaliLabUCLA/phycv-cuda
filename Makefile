@@ -3,7 +3,7 @@ CXX := g++
 
 CFLAGS := -std=c++11 --use_fast_math -Xcompiler -fopenmp -Xptxas -O3 -arch=sm_50 -maxrregcount=32
 CXXFLAGS := -std=c++11 -O3
-LIBS := -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui -lopencv_videoio -lcufft -lgomp -ljetson-inference -ljetson-utils
+LIBS := -lstdc++fs -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui -lopencv_videoio -lcufft -lgomp -ljetson-inference -ljetson-utils
 LDFLAGS := -L/usr/lib/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu/tegra
 
 INCLUDES := -I/usr/include/opencv4 -I/usr/local/include/jetson-inference -I/usr/local/include/jetson-utils -Iincludes

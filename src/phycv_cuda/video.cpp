@@ -3,6 +3,10 @@
 #include <mutex>
 #include <condition_variable>
 #include <iomanip>
+#include <string>
+#include <experimental/filesystem>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
@@ -15,6 +19,8 @@
 
 using namespace std; 
 using namespace cv; 
+
+namespace fs = experimental::filesystem; 
 
 // TODO: add option to specify CSI or USB camera in constructor. 
 WebCam::WebCam(int device, int width, int height)
@@ -82,7 +88,6 @@ Window::Window(const string& window1_name, const string& window2_name)
 
 void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool show_detections, bool show_timing, bool lite) {
 
-    //Controller controller; 
     int motor_step = 2; 
     int focus_step = 100; 
     int zoom_step = 100; 
@@ -145,11 +150,17 @@ void Window::display_fps(Mat& frame) {
 void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_detections) {
     cout << "Running VEViD on input image " << flags->i_value << endl; 
 
-    namedWindow("Original Image", WINDOW_NORMAL); 
-    namedWindow("VEViD-Enhanced Image", WINDOW_NORMAL); 
+    frame = imread(flags->i_value); 
+
+    if (flags->r_value == nullptr) {
+        params->width = frame.cols; 
+        params->height = frame.rows; 
+        cout << "Custom resolution parameters not specified, using original image resolution:" << endl;
+        cout << "   width = " << params->width << endl;
+        cout << "   height = " << params->height << endl;
+    }
 
     Vevid vevid(params->width, params->height, params->S, params->T, params->b, params->G); 
-    frame = imread(flags->i_value); 
 
     if (frame.empty()) {
         cout << "Error: Could not load the input image " << endl; 
@@ -157,7 +168,11 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
     }
 
     resize(frame, frame, Size(params->width, params->height)); 
-    imshow("Original Image", frame); 
+    if (flags->w_value == nullptr) {
+        namedWindow("Original Image", WINDOW_NORMAL); 
+        namedWindow("VEViD-Enhanced Image", WINDOW_NORMAL); 
+        imshow("Original Image", frame); 
+    }
     vevid.run(frame, flags->t_flag, flags->l_flag); 
 
     if (show_detections) {
@@ -167,12 +182,31 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
         net.run(frame); 
     }
 
-    imshow("VEViD-Enhanced Image", frame); 
+    if (flags->w_value == nullptr) {
+        imshow("VEViD-Enhanced Image", frame); 
+    }
 
     waitKey();
 
     if (flags->w_value != nullptr) {
         cout << "Writing image to " << flags->w_value << endl;
+
+        string output_path(flags->w_value); 
+
+        size_t last_slash = output_path.find_last_of('/');
+        if (last_slash == string::npos) {
+            cout << "Error: Invalid output path format: " << flags->w_value << endl; 
+            exit(1); 
+        }
+
+        string out_dir = output_path.substr(0, last_slash); 
+
+        if (!fs::exists(out_dir)) {
+            if (!fs::create_directories(out_dir)) {
+                cout << "Error: Could not create directory " << out_dir << endl;
+                exit(1);
+            }
+        }
 
         if (!imwrite(flags->w_value, frame)) {
             cout << "Error: Could not write the output image to " << flags->w_value << endl; 
@@ -191,10 +225,12 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
     }
 
     bool change_dims = false;
-    if (camera.get(CAP_PROP_FRAME_WIDTH) != params->width ||
-        camera.get(CAP_PROP_FRAME_HEIGHT) != params->height)
-    {
-        change_dims = true;
+    if (flags->r_value != nullptr) {
+        change_dims = true; 
+    }
+    else {
+        params->width = camera.get(CAP_PROP_FRAME_WIDTH); 
+        params->height = camera.get(CAP_PROP_FRAME_HEIGHT); 
     }
 
     if (flags->w_value == nullptr) {
@@ -206,7 +242,23 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
     VideoWriter output;
 
     if (flags->w_value != nullptr) {
-        string output_path = flags->w_value;
+        cout << "Writing video to " << flags->w_value << endl;
+        string output_path(flags->w_value);
+
+        size_t last_slash = output_path.find_last_of('/');
+        if (last_slash == string::npos) {
+            cout << "Error: Invalid output path format: " << flags->w_value << endl; 
+            exit(1); 
+        }
+
+        string out_dir = output_path.substr(0, last_slash); 
+
+        if (!fs::exists(out_dir)) {
+            if (!fs::create_directories(out_dir)) {
+                cout << "Error: Could not create directory " << out_dir << endl;
+                exit(1);
+            }
+        }
         int fourcc = VideoWriter::fourcc('a', 'v', 'c', '1');
         int fps = 30;
         Size frame_size(params->width, params->height);

@@ -96,13 +96,8 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
         print_usage(argv[0]);
         exit(0);
     }
-
-    if (flags->r_value == nullptr) {
-        cout << "Custom resolution not specified, using default values:" << endl; 
-        cout << "   width = " << params->width << endl;
-        cout << "   height = " << params->height << endl;
-    }
-    else {
+    
+    if (flags->r_value != nullptr) {
         string input(flags->r_value); 
         istringstream iss(input); 
         string token; 
@@ -149,8 +144,6 @@ void process_args(int argc, char* argv[], Flags* flags, Params* params) {
 
     if (flags->p_value == nullptr) {
         cout << "Custom parameters not specified, using default values:" << endl;
-        cout << "   width = " << params->width << endl;
-        cout << "   height = " << params->height << endl;
         cout << "   S = " << params->S << endl;
         cout << "   T = " << params->T << endl;
         cout << "   b = " << params->b << endl;
