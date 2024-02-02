@@ -5,8 +5,6 @@
 #include <iomanip>
 #include <string>
 #include <experimental/filesystem>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
