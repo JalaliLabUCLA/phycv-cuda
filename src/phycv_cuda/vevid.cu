@@ -129,7 +129,3 @@ Vevid::~Vevid()
     cudaFree(d_image_V); 
     cudaFree(d_data); 
 }
-
-
-
-
