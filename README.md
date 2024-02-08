@@ -37,17 +37,22 @@ PhyCV CUDA holds the source files needed to run the C++/CUDA versions of the [Ph
 ### Instructions
 ```bash
 # 1. Download the repo from GitHub
-git clone https://github.com/{REPO_NAME}
+git clone https://github.com/JalaliLabUCLA/phycv-cuda
 # 2. cd into the repo
-cd {REPO_NAME}
+cd phycv-cuda
 # 3. Compile
 make
 ```
 Now you should see the executable output `vevid` in the directory. We list typical usages of the repo below
 
-Run VEViD on the video feed from the camera
+Run VEViD on the video feed from the camera at default 480p resolution.
 ```bash
 ./vevid
+```
+
+Run VEViD on the video feed from the camera at 720p resolution. Use `-r <width>,<height>` to specify the processed frame size. 
+```bash
+./vevid -r 1280,720
 ```
 
 Run VEViD on a single image file. indicate the file location after `-i` 
@@ -65,7 +70,12 @@ If you want to save the processed video, indicate saving location after `-w`. No
 ./vevid -v ./assets/input_videos/video_campus.mp4 -w ./output/enhanced_campus.mp4
 ```
 
-The default parameters of VEViD are defined in `includes/options.hpp`. You can change these parameters by using the `-p` and `-r` flags. Use `-p <PARAM=val>` where `PARAM` is one of the VEViD parameters `S, T, b, G` and `val` is a floating point number. Use `-r <width>,<height>` to specify the processed frame size. 
+The default parameters of VEViD are defined in `includes/options.hpp`. You can change these parameters by using the `-p` and `-r` flags. Use `-p <PARAM=val>` where `PARAM` is one of the VEViD parameters `S, T, b, G` and `val` is a floating point number. Multiple parameters can be set at the same time, e.g:
+
+Set S to 0.4 and b to 0.2 (parameters must be separated with commas not spaces). 
+```bash
+./vevid -p S=0.4,b=0.2
+```
 
 
 See all the options from the command line:
