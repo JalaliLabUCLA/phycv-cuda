@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     Mat frame; 
 
     if (flags.i_value != nullptr) {
-        window.process_image(frame, &flags, &params, flags.d_flag); 
+        window.process_image(frame, &flags, &params);
         return 0; 
     }
 
@@ -34,13 +34,13 @@ int main(int argc, char** argv) {
     VideoCapture camera;
 
     if (flags.v_value != nullptr) {
-        window.process_video(camera, frame, &flags, &params, flags.d_flag); 
+        window.process_video(camera, frame, &flags, &params); 
         return 0; 
     }
     
     // Process a camera feed
     thread capture_thread(&WebCam::start_capturing, &webcam); 
-    thread display_thread(&Window::process_camera, &window, ref(webcam), &params, true, flags.d_flag, flags.t_flag, flags.l_flag);
+    thread display_thread(&Window::process_camera, &window, ref(webcam), &flags, &params);
     display_thread.join(); 
     webcam.stop_capturing();
     capture_thread.join(); 

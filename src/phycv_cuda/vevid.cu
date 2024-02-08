@@ -96,7 +96,7 @@ void Vevid::run(Mat& image, bool show_timing, bool lite)
 
     // Copy data to host
     MEASURE_GPU_TIME(cudaMemcpy(idata, d_data, N * 3 * sizeof(uint8_t), cudaMemcpyDeviceToHost), t_oCopy); 
-
+    cudaDeviceSynchronize();
     auto vevid_stop = chrono::high_resolution_clock::now(); 
     chrono::duration<float, milli> total = vevid_stop - vevid_start; 
 

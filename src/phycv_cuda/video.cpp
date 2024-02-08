@@ -81,14 +81,15 @@ int WebCam::get_height() const {
 }
 
 Window::Window(const string& window1_name, const string& window2_name)
-    : m_window1_name(window1_name), m_window2_name(window2_name), m_exit(false), m_show_fps(false), m_frame_count(0) 
+    : m_window1_name(window1_name), m_window2_name(window2_name), m_exit(false), m_frame_count(0) 
 {}
 
-void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool show_detections, bool show_timing, bool lite) {
+void Window::process_camera(WebCam& webcam, Flags* flags, Params* params) {
 
-    int motor_step = 2; 
-    int focus_step = 100; 
-    int zoom_step = 100; 
+    
+    cout << "Using camera resolution:" << endl;
+    cout << "   width = " << params->width << endl;
+    cout << "   height = " << params->height << endl;
 
     Vevid vevid(webcam.get_width(), webcam.get_height(), params->S, params->T, params->b, params->G);
     namedWindow(m_window1_name, WINDOW_NORMAL); 
@@ -96,7 +97,7 @@ void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool 
 
     uchar3* d_image; 
     DetectNet net(d_image, webcam.get_width(), webcam.get_height()); 
-    if (show_detections) {
+    if (flags->d_flag) {
         net.create(); 
     }
 
@@ -104,16 +105,14 @@ void Window::process_camera(WebCam& webcam, Params* params, bool show_fps, bool 
         Mat frame = webcam.get_frame();
 
         imshow(m_window1_name, frame);
-        vevid.run(frame, show_timing, lite);
+        vevid.run(frame, flags->t_flag, flags->l_flag);
 
-        if (show_detections) {
+        if (flags->d_flag) {
             net.run(frame); 
         }
 
-        if (show_fps) {
-            display_fps(frame); 
-        }
-
+        display_fps(frame); 
+        
         imshow(m_window2_name, frame); 
         m_frame_count++;
 
@@ -145,7 +144,7 @@ void Window::display_fps(Mat& frame) {
     last_time = current_time;
 }
 
-void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_detections) {
+void Window::process_image(Mat& frame, Flags* flags, Params* params) {
     cout << "Running VEViD on input image " << flags->i_value << endl; 
 
     frame = imread(flags->i_value); 
@@ -173,7 +172,7 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
     }
     vevid.run(frame, flags->t_flag, flags->l_flag); 
 
-    if (show_detections) {
+    if (flags->d_flag) {
         uchar3* d_image; 
         DetectNet net(d_image, params->width, params->height); 
         net.create(); 
@@ -213,7 +212,7 @@ void Window::process_image(Mat& frame, Flags* flags, Params* params, bool show_d
     }
 }
 
-void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Params* params, bool show_detections) {
+void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Params* params) {
     cout << "Running VEViD on input video " << flags->v_value << endl;
 
     camera.open(flags->v_value);
@@ -229,6 +228,9 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
     else {
         params->width = camera.get(CAP_PROP_FRAME_WIDTH); 
         params->height = camera.get(CAP_PROP_FRAME_HEIGHT); 
+        cout << "Custom resolution parameters not specified, using original video resolution:" << endl;
+        cout << "   width = " << params->width << endl;
+        cout << "   height = " << params->height << endl;
     }
 
     if (flags->w_value == nullptr) {
@@ -271,7 +273,7 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
 
     uchar3* d_image;
     DetectNet net(d_image, params->width, params->height);
-    if (show_detections) {
+    if (flags->d_flag) {
         net.create();
     }
 
@@ -292,7 +294,7 @@ void Window::process_video(VideoCapture& camera, Mat& frame, Flags* flags, Param
     
         vevid.run(frame, flags->t_flag, flags->l_flag);
 
-        if (show_detections) {
+        if (flags->d_flag) {
             net.run(frame);
         }
 
