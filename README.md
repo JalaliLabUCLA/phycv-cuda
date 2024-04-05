@@ -4,7 +4,7 @@
 
 # PhyCV-CUDA
 
-Welcome to PhyCV-CUDA! This is the CUDA/C++ version of the [PhyCV (Physics-inspired Computer Vision) library](https://github.com/JalaliLabUCLA/phycv/). It is specifically optimized for edge devices with NVIDIA GPUs. This repo is developed by [Jalali-Lab](https://photonics.ucla.edu/) @ UCLA.
+Welcome to PhyCV-CUDA! This is the CUDA/C++ version of the [PhyCV (Physics-inspired Computer Vision) library](https://github.com/JalaliLabUCLA/phycv/). It is specifically optimized for edge devices with NVIDIA GPUs. This repo is developed by [Jalali-Lab](https://photonics.ucla.edu/) @ UCLA. You can find the poster presented in NVIDIA GTC 2024 [here](assets/GTC_2024_Poster.pdf).
  
 ## Introduction 
 
